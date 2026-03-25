@@ -5,13 +5,24 @@ Analyze a codebase for issues, fix them with AI review, open PRs.
 ## Workflow
 
 ```
-Analyzer Agent → Human Triage → Fix + Review Loop → PR → Human Review
+Analyzer Agent → Human Triage → Fix + Review Loop → PR → Human Review → Merge
 ```
 
-1. `agent-loop analyze` — agent scans codebase, creates GitHub issues labeled `needs-review`
-2. Human reviews issues on GitHub, relabels to `ready-to-fix`
-3. `agent-loop fix` — picks up `ready-to-fix` issues, runs fix + review loop, opens PR
-4. Human reviews the PR
+1. `agent-loop analyze` — agent scans codebase, creates GitHub issues
+2. Human reviews issues, swaps `needs-human-review` for `human-approved`
+3. `agent-loop fix` — picks up approved issues, runs fix + review loop, opens PR
+4. Human reviews the PR, merges it (which closes the issue)
+
+## Labels
+
+| Label | Type | Set by | Lifecycle |
+|---|---|---|---|
+| `agent-reported` | Origin | Analyzer | Permanent |
+| `needs-human-review` | Status | Analyzer | Removed when human approves |
+| `human-approved` | Audit | Human | Permanent |
+| `agent-fix-in-progress` | Lock | Fixer | Permanent |
+
+All labels persist on closed issues as a full audit trail.
 
 ## Requirements
 
@@ -26,7 +37,7 @@ Analyzer Agent → Human Triage → Fix + Review Loop → PR → Human Review
 cd /path/to/project
 agent-loop analyze
 
-# Fix all ready-to-fix issues
+# Fix all human-approved issues
 agent-loop fix
 
 # Fix a specific issue
@@ -45,10 +56,6 @@ max_iterations: 3
 context: |
   This is a Python project using FastAPI.
   Tests use pytest. Run them with `make test`.
-labels:
-  needs_review: needs-review
-  ready_to_fix: ready-to-fix
-  in_progress: in-progress
 ```
 
 All fields are optional — sensible defaults are built in.

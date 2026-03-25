@@ -8,9 +8,9 @@
 agent-loop: analyze a codebase for issues, fix them with review, open PRs.
 
 Workflow:
-  1. analyze  — agent scans codebase, creates GitHub issues labeled `needs-review`
-  2. (human triages on GitHub, relabels to `ready-to-fix`)
-  3. fix      — picks up `ready-to-fix` issues, runs fix+review loop, opens PR
+  1. analyze  — agent scans codebase, creates GitHub issues
+  2. (human reviews on GitHub, approves issues for fixing)
+  3. fix      — picks up approved issues, runs fix+review loop, opens PRs
 """
 
 import argparse
@@ -18,9 +18,41 @@ import json
 import subprocess
 import sys
 import textwrap
+from enum import StrEnum
 from pathlib import Path
 
 import yaml
+
+
+# ---------------------------------------------------------------------------
+# Labels
+# ---------------------------------------------------------------------------
+
+
+class Label(StrEnum):
+    """Issue labels tracking origin, approval, and workflow state.
+
+    Lifecycle:
+      REPORTED (analyzer)  →  APPROVED (human)  →  FIX_IN_PROGRESS (fixer)  →  issue closed by PR merge
+                                                                                (all labels persist)
+    """
+
+    # Permanent — origin and audit trail
+    AGENT_REPORTED = "agent-reported"
+    HUMAN_APPROVED = "human-approved"
+
+    # Transient — workflow state
+    NEEDS_HUMAN_REVIEW = "needs-human-review"
+    AGENT_FIX_IN_PROGRESS = "agent-fix-in-progress"
+
+
+LABEL_DESCRIPTIONS = {
+    Label.AGENT_REPORTED: "Issue found by automated analysis",
+    Label.HUMAN_APPROVED: "Reviewed and approved by a human",
+    Label.NEEDS_HUMAN_REVIEW: "Awaiting human triage",
+    Label.AGENT_FIX_IN_PROGRESS: "Agent is working on a fix",
+}
+
 
 # ---------------------------------------------------------------------------
 # Config
@@ -28,12 +60,6 @@ import yaml
 
 DEFAULT_CONFIG = {
     "max_iterations": 3,
-    "labels": {
-        "needs_review": "needs-review",
-        "ready_to_fix": "ready-to-fix",
-        "in_progress": "in-progress",
-        "ready_for_human_review": "ready-for-human-review",
-    },
     "analyze_prompt": textwrap.dedent("""\
         Analyze this codebase for issues. For each issue found, respond with a JSON array
         of objects, each with:
@@ -79,9 +105,6 @@ def load_config(project_dir: Path) -> dict:
     if config_file.exists():
         with open(config_file) as f:
             overrides = yaml.safe_load(f) or {}
-        # Merge (shallow for labels)
-        if "labels" in overrides:
-            config["labels"] = {**config["labels"], **overrides.pop("labels")}
         config.update(overrides)
     return config
 
@@ -126,6 +149,11 @@ def claude(prompt: str, project_dir: Path) -> str:
     return result.stdout.strip()
 
 
+def ensure_label(label: Label) -> None:
+    """Ensure a label exists in the repo."""
+    gh("label", "create", label.value, "--force", "--description", LABEL_DESCRIPTIONS[label])
+
+
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
@@ -166,59 +194,68 @@ def cmd_analyze(project_dir: Path, config: dict) -> None:
         print("✅ No issues found.")
         return
 
-    label = config["labels"]["needs_review"]
-
-    # Ensure label exists
-    gh("label", "create", label, "--force", "--description", "Agent-found issue awaiting human review")
+    # Ensure workflow labels exist
+    ensure_label(Label.AGENT_REPORTED)
+    ensure_label(Label.NEEDS_HUMAN_REVIEW)
 
     for issue in issues:
         title = issue["title"]
         body = issue.get("body", "")
         extra_labels = issue.get("labels", [])
-        all_labels = [label] + extra_labels
 
-        # Ensure all labels exist
+        # Ensure extra labels exist
         for l in extra_labels:
             gh("label", "create", l, "--force", "--description", "")
 
-        label_args = [arg for l in all_labels for arg in ("--label", l)]
+        all_labels = [Label.AGENT_REPORTED, Label.NEEDS_HUMAN_REVIEW] + extra_labels
+        label_args = [arg for l in all_labels for arg in ("--label", str(l))]
         gh("issue", "create", "--title", title, "--body", body, *label_args)
         print(f"  📋 Created: {title}")
 
-    print(f"\n✅ Created {len(issues)} issue(s) labeled '{label}'.")
-    print("   Review them on GitHub and relabel to 'ready-to-fix' when ready.")
+    print(f"\n✅ Created {len(issues)} issue(s).")
+    print(f"   Review them on GitHub: swap '{Label.NEEDS_HUMAN_REVIEW}' for '{Label.HUMAN_APPROVED}' when ready.")
 
 
 def cmd_fix(project_dir: Path, config: dict, issue_number: int | None = None) -> None:
-    """Pick up ready-to-fix issues and run the fix+review loop."""
-    label_ready = config["labels"]["ready_to_fix"]
-    label_in_progress = config["labels"]["in_progress"]
+    """Pick up human-approved issues and run the fix+review loop."""
     max_iterations = config["max_iterations"]
 
     # Get issues to fix
     if issue_number:
-        issues_json = gh("issue", "view", str(issue_number), "--json", "number,title,body")
-        issues = [json.loads(issues_json)]
+        issues_json = gh("issue", "view", str(issue_number), "--json", "number,title,body,labels")
+        issue = json.loads(issues_json)
+        labels = {l["name"] for l in issue.get("labels", [])}
+        if Label.HUMAN_APPROVED not in labels:
+            print(f"⚠️  Issue #{issue_number} is not labeled '{Label.HUMAN_APPROVED}'. Skipping.")
+            return
+        if Label.AGENT_FIX_IN_PROGRESS in labels:
+            print(f"⚠️  Issue #{issue_number} already has '{Label.AGENT_FIX_IN_PROGRESS}'. Skipping.")
+            return
+        issues = [issue]
     else:
-        issues_json = gh("issue", "list", "--label", label_ready, "--json", "number,title,body", "--limit", "100")
+        issues_json = gh(
+            "issue", "list",
+            "--label", Label.HUMAN_APPROVED,
+            "--search", f"-label:{Label.AGENT_FIX_IN_PROGRESS}",
+            "--json", "number,title,body",
+            "--limit", "100",
+        )
         issues = json.loads(issues_json)
 
     if not issues:
-        print(f"No issues labeled '{label_ready}' found.")
+        print(f"No issues labeled '{Label.HUMAN_APPROVED}' (without '{Label.AGENT_FIX_IN_PROGRESS}') found.")
         return
 
     print(f"Found {len(issues)} issue(s) to fix.\n")
 
     for issue in issues:
-        fix_single_issue(project_dir, config, issue, label_ready, label_in_progress, max_iterations)
+        fix_single_issue(project_dir, config, issue, max_iterations)
 
 
 def fix_single_issue(
     project_dir: Path,
     config: dict,
     issue: dict,
-    label_ready: str,
-    label_in_progress: str,
     max_iterations: int,
 ) -> None:
     """Fix a single issue with the review loop."""
@@ -231,8 +268,9 @@ def fix_single_issue(
     print(f"🔧 Fixing #{number}: {title}")
     print(f"{'='*60}\n")
 
-    # Mark as in progress
-    gh("issue", "edit", str(number), "--remove-label", label_ready, "--add-label", label_in_progress)
+    # Claim the issue — add lock label
+    ensure_label(Label.AGENT_FIX_IN_PROGRESS)
+    gh("issue", "edit", str(number), "--add-label", Label.AGENT_FIX_IN_PROGRESS)
 
     # Create branch
     default_branch = git("rev-parse", "--abbrev-ref", "HEAD")
@@ -298,21 +336,19 @@ def fix_single_issue(
         git("commit", "-m", f"fix: address issue #{number} - {title}")
         git("push", "-u", "origin", branch)
 
-        # Open PR
-        label_pr = config["labels"]["ready_for_human_review"]
-        gh("label", "create", label_pr, "--force", "--description", "Agent-reviewed PR ready for human")
-        pr_body = f"Fixes #{number}\n\nAgent review {'passed' if iteration < max_iterations else f'did not converge after {max_iterations} iterations'}."
+        # Open PR — "Fixes #N" will close the issue on merge
+        converged = iteration < max_iterations
+        pr_body = (
+            f"Fixes #{number}\n\n"
+            f"Agent review {'passed' if converged else f'did not converge after {max_iterations} iterations'}."
+        )
         gh(
             "pr", "create",
             "--title", f"Fix #{number}: {title}",
             "--body", pr_body,
-            "--label", config["labels"]["ready_for_human_review"],
             "--head", branch,
         )
         print(f"\n  🎉 PR opened for #{number}!")
-
-        # Clean up issue label
-        gh("issue", "edit", str(number), "--remove-label", label_in_progress)
 
     finally:
         # Always return to default branch
@@ -330,9 +366,9 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""\
             workflow:
-              1. agent-loop analyze         → creates GitHub issues labeled 'needs-review'
-              2. (human reviews on GitHub, relabels to 'ready-to-fix')
-              3. agent-loop fix             → fixes issues and opens PRs
+              1. agent-loop analyze         → creates GitHub issues
+              2. (human reviews on GitHub, swaps 'needs-human-review' for 'human-approved')
+              3. agent-loop fix             → fixes approved issues and opens PRs
               3. agent-loop fix --issue 42  → fix a specific issue
         """),
     )
@@ -347,7 +383,7 @@ def main() -> None:
 
     sub.add_parser("analyze", help="Analyze codebase and create GitHub issues")
 
-    fix_parser = sub.add_parser("fix", help="Fix ready-to-fix issues")
+    fix_parser = sub.add_parser("fix", help="Fix human-approved issues")
     fix_parser.add_argument("--issue", "-i", type=int, help="Fix a specific issue number")
 
     args = parser.parse_args()
