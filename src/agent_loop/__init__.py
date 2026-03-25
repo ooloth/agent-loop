@@ -13,6 +13,8 @@ import re
 import subprocess
 import sys
 import textwrap
+import time
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
@@ -221,6 +223,49 @@ def ensure_label(label: Label) -> None:
     gh("label", "create", label.value, "--force", "--description", LABEL_DESCRIPTIONS[label])
 
 
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+
+
+def log(msg: str, prefix: str = "") -> None:
+    """Log a timestamped message."""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] {prefix}{msg}")
+
+
+def log_step(msg: str, last: bool = False) -> None:
+    """Log a step under the current issue."""
+    connector = "└──" if last else "├──"
+    log(f"{connector} {msg}")
+
+
+def log_detail(msg: str, last_step: bool = False) -> None:
+    """Log a detail line under the current step."""
+    rail = " " if last_step else "│"
+    log(f"{rail}      {msg}")
+
+
+def summarize_feedback(feedback: str, max_len: int = 80) -> str:
+    """Extract a one-line summary from reviewer feedback."""
+    # Look for the Required Changes section first
+    match = re.search(r"#### 🔧 Required Changes\s*\n(.+)", feedback)
+    if match:
+        summary = match.group(1).strip().rstrip(".")
+    else:
+        # Fall back to first substantive line after a heading
+        for line in feedback.split("\n"):
+            line = line.strip()
+            if line and not line.startswith("#") and not line.startswith("**") and not line.startswith("---"):
+                summary = line.rstrip(".")
+                break
+        else:
+            summary = "(no details)"
+    if len(summary) > max_len:
+        summary = summary[:max_len - 1] + "…"
+    return summary
+
+
 def format_review_comment(review_log: list[dict], converged: bool, max_iterations: int) -> str:
     """Format the review trail as a readable GitHub comment."""
     total = len(review_log)
@@ -277,13 +322,14 @@ def format_review_comment(review_log: list[dict], converged: bool, max_iteration
 
 def cmd_analyze(project_dir: Path, config: dict) -> None:
     """Analyze the codebase and create GitHub issues."""
-    print("🔍 Analyzing codebase...")
+    log("🔍 Analyzing codebase...")
 
     prompt = config["analyze_prompt"]
     if config["context"]:
         prompt = f"Project context:\n{config['context']}\n\n{prompt}"
 
-    raw = claude(prompt, project_dir, allowed_tools=_READ_ONLY_TOOLS)
+    t0 = time.monotonic()
+    raw = claude(prompt, project_dir)
 
     # Parse JSON from response (handle markdown code fences)
     json_str = raw
@@ -306,8 +352,10 @@ def cmd_analyze(project_dir: Path, config: dict) -> None:
         print(raw, file=sys.stderr)
         sys.exit(1)
 
+    elapsed = int(time.monotonic() - t0)
+    log(f"🔍 Analysis complete ({elapsed}s) — {len(issues)} issue(s) found")
+
     if not issues:
-        print("✅ No issues found.")
         return
 
     # Ensure workflow labels exist
@@ -322,7 +370,7 @@ def cmd_analyze(project_dir: Path, config: dict) -> None:
     for issue in issues:
         title = issue["title"]
         if title in existing_titles:
-            print(f"  ⏭️  Skipped (already exists): {title}")
+            log(f"├── ⏭️  Skipped (already exists): {title}")
             continue
 
         body = issue.get("body", "")
@@ -335,11 +383,13 @@ def cmd_analyze(project_dir: Path, config: dict) -> None:
         all_labels = [Label.AGENT_REPORTED, Label.NEEDS_HUMAN_REVIEW] + extra_labels
         label_args = [arg for l in all_labels for arg in ("--label", str(l))]
         gh("issue", "create", "--title", title, "--body", body, *label_args)
-        print(f"  📋 Created: {title}")
+        is_last = issue is issues[-1]
+        connector = "└──" if is_last else "├──"
+        log(f"{connector} 📋 Created: {title}")
         created += 1
 
-    print(f"\n✅ Created {created} issue(s).")
-    print(f"   Review them on GitHub and add '{Label.READY_TO_FIX}' when ready.")
+    skipped = len(issues) - created
+    log(f"✅ {created} created, {skipped} skipped. Add '{Label.READY_TO_FIX}' when ready.")
 
 
 def cmd_fix(project_dir: Path, config: dict, issue_number: int | None = None) -> None:
@@ -352,10 +402,10 @@ def cmd_fix(project_dir: Path, config: dict, issue_number: int | None = None) ->
         issue = json.loads(issues_json)
         labels = {l["name"] for l in issue.get("labels", [])}
         if Label.READY_TO_FIX not in labels:
-            print(f"⚠️  Issue #{issue_number} is not labeled '{Label.READY_TO_FIX}'. Skipping.")
+            log(f"⚠️  Issue #{issue_number} is not labeled '{Label.READY_TO_FIX}'. Skipping.")
             return
         if Label.AGENT_FIX_IN_PROGRESS in labels:
-            print(f"⚠️  Issue #{issue_number} already has '{Label.AGENT_FIX_IN_PROGRESS}'. Skipping.")
+            log(f"⚠️  Issue #{issue_number} already has '{Label.AGENT_FIX_IN_PROGRESS}'. Skipping.")
             return
         issues = [issue]
     else:
@@ -369,10 +419,8 @@ def cmd_fix(project_dir: Path, config: dict, issue_number: int | None = None) ->
         issues = json.loads(issues_json)
 
     if not issues:
-        print(f"No issues labeled '{Label.READY_TO_FIX}' (without '{Label.AGENT_FIX_IN_PROGRESS}') found.")
+        log(f"💤 No issues labeled '{Label.READY_TO_FIX}'")
         return
-
-    print(f"Found {len(issues)} issue(s) to fix.\n")
 
     for issue in issues:
         fix_single_issue(project_dir, config, issue, max_iterations)
@@ -390,9 +438,8 @@ def fix_single_issue(
     body = issue["body"]
     branch = f"fix/issue-{number}"
 
-    print(f"{'='*60}")
-    print(f"🔧 Fixing #{number}: {title}")
-    print(f"{'='*60}\n")
+    fix_start = time.monotonic()
+    log(f"🔧 #{number} {title}")
 
     # Claim the issue — add lock label
     ensure_label(Label.AGENT_FIX_IN_PROGRESS)
@@ -410,7 +457,8 @@ def fix_single_issue(
         if config["context"]:
             fix_prompt = f"Project context:\n{config['context']}\n\n{fix_prompt}"
 
-        print("  🤖 Agent is implementing fix...")
+        t0 = time.monotonic()
+        log_step("🤖 Implementing fix...")
         claude(fix_prompt, project_dir)
 
         # Stage changes
@@ -422,11 +470,10 @@ def fix_single_issue(
         converged = False
         while iteration < max_iterations:
             iteration += 1
-            print(f"\n  🔎 Review iteration {iteration}/{max_iterations}...")
 
             diff = git("diff", "--cached")
             if not diff:
-                print("  ⚠️  No changes were made. Skipping.")
+                log_step("⚠️  No changes were made", last=True)
                 break
 
             review_prompt = (
@@ -437,7 +484,9 @@ def fix_single_issue(
             if config["context"]:
                 review_prompt = f"Project context:\n{config['context']}\n\n{review_prompt}"
 
-            feedback = claude(review_prompt, project_dir, allowed_tools=_READ_ONLY_TOOLS)
+            t0 = time.monotonic()
+            feedback = claude(review_prompt, project_dir)
+            review_elapsed = int(time.monotonic() - t0)
             approved = bool(re.search(r"\bLGTM\b", feedback, re.IGNORECASE))
 
             review_log.append({
@@ -446,15 +495,16 @@ def fix_single_issue(
                 "feedback": feedback,
             })
 
-            print(f"  📝 Reviewer response:\n{textwrap.indent(feedback, '     ')}\n")
-
             if approved:
-                print("  ✅ Review passed!")
+                log_step(f"🔎 Review {iteration}/{max_iterations} — ✅ Approved ({review_elapsed}s)", last=True)
                 converged = True
                 break
 
-            if iteration >= max_iterations:
-                print(f"  ⚠️  Max iterations ({max_iterations}) reached. Opening PR with concerns noted.")
+            is_last_iteration = iteration >= max_iterations
+            log_step(f"🔎 Review {iteration}/{max_iterations} — 🔄 Changes requested ({review_elapsed}s)", last=is_last_iteration)
+            log_detail(summarize_feedback(feedback), last_step=is_last_iteration)
+
+            if is_last_iteration:
                 break
 
             # Address feedback
@@ -464,14 +514,14 @@ def fix_single_issue(
                 f"Please address the concerns. Prefer the simplest solution — if a problem\n"
                 f"can be eliminated rather than handled, do that instead."
             )
-            print("  🤖 Agent is addressing feedback...")
+            log_step("🤖 Addressing feedback...")
             claude(fix_feedback_prompt, project_dir)
             git("add", "-A")
 
         # Commit and push
         diff_check = git("diff", "--cached")
         if not diff_check:
-            print(f"\n  ⚠️  No changes for #{number}. May already be fixed.")
+            log_step(f"⚠️  No changes for #{number}. May already be fixed.", last=True)
             gh("issue", "comment", str(number), "--body",
                "Agent attempted a fix but no changes were needed. This issue may already be resolved.\n\n"
                "Removing `ready-to-fix` — re-add it to retry, or close the issue if it's resolved.")
@@ -495,7 +545,8 @@ def fix_single_issue(
         gh("pr", "comment", branch, "--body", review_comment)
 
         pr_opened = True
-        print(f"\n  🎉 PR opened for #{number}!")
+        total_elapsed = int(time.monotonic() - fix_start)
+        log_step(f"🎉 PR opened ({total_elapsed}s total)", last=True)
 
     finally:
         # Always return to default branch and clean up if no PR was opened
@@ -518,24 +569,20 @@ def cmd_watch(
 ) -> None:
     """Poll for work: fix ready issues, analyze when queue is low."""
     import signal
-    from datetime import datetime
 
     stopping = False
 
     def handle_signal(sig: int, frame: object) -> None:
         nonlocal stopping
         stopping = True
-        print(f"\n⏹️  Stopping after current step completes...")
+        log("\n⏹️  Stopping after current step completes...")
 
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
-    def log(msg: str) -> None:
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        print(f"[{timestamp}] {msg}")
-
     log(f"👀 Watching {project_dir.name} (interval={interval}s, max_open={max_open_issues})")
-    log(f"   Press Ctrl+C to stop gracefully.\n")
+    log(f"   Press Ctrl+C to stop gracefully.")
+    print()
 
     while not stopping:
         # Step 1: Fix any ready-to-fix issues
@@ -549,7 +596,6 @@ def cmd_watch(
         ready_issues = json.loads(ready_json)
 
         if ready_issues:
-            log(f"🔧 {len(ready_issues)} issue(s) ready to fix")
             cmd_fix(project_dir, config)
             if stopping:
                 break
@@ -575,11 +621,11 @@ def cmd_watch(
             break
 
         # Sleep in small increments so Ctrl+C is responsive
-        log(f"😴 Sleeping {interval}s...\n")
+        log(f"😴 Sleeping {interval}s...")
+        print()
         for _ in range(interval):
             if stopping:
                 break
-            import time
             time.sleep(1)
 
     log("👋 Stopped.")
