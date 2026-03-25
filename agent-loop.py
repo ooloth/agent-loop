@@ -362,21 +362,25 @@ def fix_single_issue(
         git("push", "-u", "origin", branch)
 
         # Open PR — "Fixes #N" will close the issue on merge
-        review_trail = "\n".join(
-            f"### Iteration {r['iteration']}: {'✅ Approved' if r['approved'] else '⚠️ Changes requested'}\n\n{r['feedback']}\n"
-            for r in review_log
-        )
-        pr_body = (
-            f"Fixes #{number}\n\n"
-            f"## Agent Review ({'passed' if converged else f'did not converge after {max_iterations} iterations'})\n\n"
-            f"{review_trail}"
-        )
+        pr_body = f"Fixes #{number}"
         gh(
             "pr", "create",
             "--title", f"Fix #{number}: {title}",
             "--body", pr_body,
             "--head", branch,
         )
+
+        # Post review trail as a PR comment
+        review_trail = "\n".join(
+            f"### Iteration {r['iteration']}: {'✅ Approved' if r['approved'] else '⚠️ Changes requested'}\n\n{r['feedback']}\n"
+            for r in review_log
+        )
+        review_comment = (
+            f"## Agent Review ({'passed' if converged else f'did not converge after {max_iterations} iterations'})\n\n"
+            f"{review_trail}"
+        )
+        gh("pr", "comment", branch, "--body", review_comment)
+
         print(f"\n  🎉 PR opened for #{number}!")
 
     finally:
