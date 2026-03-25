@@ -64,7 +64,7 @@ LABEL_DESCRIPTIONS = {
 # ---------------------------------------------------------------------------
 
 DEFAULT_CONFIG = {
-    "max_iterations": 3,
+    "max_iterations": 5,
     "analyze_prompt": textwrap.dedent("""\
         Analyze this codebase for issues. For each issue found, respond with a JSON array
         of objects, each with:
@@ -87,11 +87,15 @@ DEFAULT_CONFIG = {
     "review_prompt": textwrap.dedent("""\
         Review the current git diff as a fix for a GitHub issue.
 
+        You are a strict reviewer. Do NOT rubber-stamp approvals. Your job is to catch
+        problems before a human sees this PR. If you are unsure about something, flag it
+        as a concern — do not give the benefit of the doubt.
+
         You MUST check each of the following and state your finding for each:
-        1. Correctness: Does the change actually fix the described issue?
-        2. Regressions: Could this break existing behavior?
-        3. Edge cases: Are boundary conditions and error cases handled?
-        4. Completeness: Is the fix complete, or are parts of the problem left unaddressed?
+        1. Correctness: Does the change actually fix the described issue? Fully, not partially?
+        2. Regressions: Could this break existing behavior? Consider all callers and code paths.
+        3. Edge cases: Are boundary conditions, empty inputs, error cases, and concurrent access handled?
+        4. Completeness: Is every aspect of the issue addressed? Are there leftover TODOs or gaps?
 
         Structure your response as:
 
@@ -102,7 +106,9 @@ DEFAULT_CONFIG = {
 
         **Verdict**: LGTM or CONCERNS
 
-        If your verdict is CONCERNS, describe what needs to change.
+        If your verdict is CONCERNS, describe EXACTLY what needs to change — be specific
+        about what code to add, modify, or remove. Vague feedback like "needs verification"
+        is not acceptable; state what the fix should be.
         Focus on correctness — do NOT nitpick style.
     """),
     "context": "",
