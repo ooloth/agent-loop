@@ -283,8 +283,9 @@ def fix_single_issue(
     ensure_label(Label.AGENT_FIX_IN_PROGRESS)
     gh("issue", "edit", str(number), "--add-label", Label.AGENT_FIX_IN_PROGRESS)
 
-    # Create branch
-    default_branch = git("rev-parse", "--abbrev-ref", "HEAD")
+    # Create branch off the repo's default branch (not whatever is currently checked out)
+    default_branch = gh("repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name")
+    git("checkout", default_branch)
     git("checkout", "-b", branch)
 
     try:
