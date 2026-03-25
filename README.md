@@ -33,8 +33,15 @@ Human-authored issues skip `agent-reported` and `needs-human-review` — just ad
 ## Install
 
 ```bash
+# Clone and enter the repo
+git clone https://github.com/ooloth/agent-loop.git
+cd agent-loop
+
+# Install dependencies
+uv sync
+
 # Install as a CLI tool (editable — source changes take effect immediately)
-uv tool install -e /path/to/agent-loop
+uv tool install -e .
 
 # Verify
 agent-loop --help
