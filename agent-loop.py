@@ -85,19 +85,25 @@ DEFAULT_CONFIG = {
         Make the minimal changes needed to address this issue.
     """),
     "review_prompt": textwrap.dedent("""\
-        Review the current git diff for problems. You are reviewing a fix for a GitHub issue.
+        Review the current git diff as a fix for a GitHub issue.
 
-        Check for:
-        1. Does the change actually fix the described issue?
-        2. Could it introduce regressions?
-        3. Are there obvious correctness problems?
-        4. Are edge cases handled?
+        You MUST check each of the following and state your finding for each:
+        1. Correctness: Does the change actually fix the described issue?
+        2. Regressions: Could this break existing behavior?
+        3. Edge cases: Are boundary conditions and error cases handled?
+        4. Completeness: Is the fix complete, or are parts of the problem left unaddressed?
 
-        If everything looks good, respond with exactly: LGTM
-        If there are concerns, describe them clearly so they can be addressed.
-        Do NOT nitpick style — focus on correctness and completeness.
+        Structure your response as:
 
-        Respond with ONLY "LGTM" or your concerns. No other text.
+        **Correctness**: <your finding>
+        **Regressions**: <your finding>
+        **Edge cases**: <your finding>
+        **Completeness**: <your finding>
+
+        **Verdict**: LGTM or CONCERNS
+
+        If your verdict is CONCERNS, describe what needs to change.
+        Focus on correctness — do NOT nitpick style.
     """),
     "context": "",
 }
@@ -306,7 +312,11 @@ def fix_single_issue(
                 print("  ⚠️  No changes were made. Skipping.")
                 break
 
-            review_prompt = config["review_prompt"] + f"\n\nHere is the diff:\n\n{diff}"
+            review_prompt = (
+                config["review_prompt"]
+                + f"\n\n## Issue being fixed\n\nTitle: {title}\nDescription:\n{body}"
+                + f"\n\n## Diff to review\n\n{diff}"
+            )
             if config["context"]:
                 review_prompt = f"Project context:\n{config['context']}\n\n{review_prompt}"
 
