@@ -1,0 +1,49 @@
+name: Bug Report
+description: Report a bug or issue in the codebase
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: "🐛 Problem"
+      description: "One or two sentences describing what is wrong."
+    validations:
+      required: true
+
+  - type: textarea
+    id: location
+    attributes:
+      label: "📍 Location"
+      description: "File path(s), line numbers, and function/method name(s)."
+      placeholder: |
+        - `src/agent_loop/__init__.py:42` — `function_name()`
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: "💥 Impact"
+      description: "What happens as a result, why it matters, and severity."
+      placeholder: |
+        - What happens as a result
+        - Why it matters
+        - How severe (e.g. crash, silent data loss, cosmetic)
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: "🔄 Current Behavior"
+      description: "What the code does now. Include a short code snippet if helpful."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: "✅ Expected Behavior"
+      description: "What the code should do instead."
+    validations:
+      required: true
