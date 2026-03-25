@@ -30,6 +30,16 @@ Human-authored issues skip `agent-reported` and `needs-human-review` — just ad
 - [gh](https://cli.github.com/) (authenticated)
 - [claude](https://docs.anthropic.com/en/docs/claude-cli) CLI
 
+## Install
+
+```bash
+# Install as a CLI tool (editable — source changes take effect immediately)
+uv tool install -e /path/to/agent-loop
+
+# Verify
+agent-loop --help
+```
+
 ## Usage
 
 ```bash
@@ -43,16 +53,31 @@ agent-loop fix
 # Fix a specific issue
 agent-loop fix --issue 42
 
+# Watch mode — poll continuously
+agent-loop watch
+agent-loop watch --interval 600           # poll every 10 minutes
+agent-loop watch --max-open-issues 5      # pause analysis when 5+ issues await review
+
 # Point at a different project
 agent-loop --project-dir /path/to/project analyze
 ```
+
+### Watch mode
+
+`agent-loop watch` runs a continuous loop:
+
+1. **Fix** any `ready-to-fix` issues
+2. **Analyze** if `needs-human-review` issues are below the cap (default: 3)
+3. **Sleep** for the interval (default: 300s)
+
+Press `Ctrl+C` to stop gracefully — the current step finishes before exiting.
 
 ## Configuration
 
 Drop a `.agent-loop.yml` in your project root to customize behavior:
 
 ```yaml
-max_iterations: 3
+max_iterations: 5
 context: |
   This is a Python project using FastAPI.
   Tests use pytest. Run them with `make test`.

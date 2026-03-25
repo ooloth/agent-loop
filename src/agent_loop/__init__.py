@@ -196,10 +196,16 @@ def git(*args: str) -> str:
     return run(["git", *args])
 
 
-def claude(prompt: str, project_dir: Path) -> str:
-    """Run a prompt through the claude CLI."""
+# Read-only tools for analysis and review (no filesystem writes or shell execution)
+_READ_ONLY_TOOLS = "Read,Glob,Grep"
+# Tools needed to implement fixes (scoped to project dir via cwd)
+_EDIT_TOOLS = "Read,Write,Edit,MultiEdit,Glob,Grep,Bash"
+
+
+def claude(prompt: str, project_dir: Path, allowed_tools: str = _EDIT_TOOLS) -> str:
+    """Run a prompt through the claude CLI with restricted tool access."""
     result = subprocess.run(
-        ["claude", "-p", prompt],
+        ["claude", "-p", prompt, "--allowedTools", allowed_tools],
         capture_output=True,
         text=True,
         cwd=project_dir,
@@ -277,7 +283,7 @@ def cmd_analyze(project_dir: Path, config: dict) -> None:
     if config["context"]:
         prompt = f"Project context:\n{config['context']}\n\n{prompt}"
 
-    raw = claude(prompt, project_dir)
+    raw = claude(prompt, project_dir, allowed_tools=_READ_ONLY_TOOLS)
 
     # Parse JSON from response (handle markdown code fences)
     json_str = raw
@@ -431,7 +437,7 @@ def fix_single_issue(
             if config["context"]:
                 review_prompt = f"Project context:\n{config['context']}\n\n{review_prompt}"
 
-            feedback = claude(review_prompt, project_dir)
+            feedback = claude(review_prompt, project_dir, allowed_tools=_READ_ONLY_TOOLS)
             approved = bool(re.search(r"\bLGTM\b", feedback, re.IGNORECASE))
 
             review_log.append({
