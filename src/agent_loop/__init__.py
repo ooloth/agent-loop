@@ -20,7 +20,6 @@ from pathlib import Path
 
 import yaml
 
-
 # ---------------------------------------------------------------------------
 # Labels
 # ---------------------------------------------------------------------------
@@ -170,7 +169,9 @@ def load_config(project_dir: Path) -> dict:
     if config_file.exists():
         with open(config_file) as f:
             # Filter out null values so they fall back to defaults rather than overriding them
-            overrides = {k: v for k, v in (yaml.safe_load(f) or {}).items() if v is not None}
+            overrides = {
+                k: v for k, v in (yaml.safe_load(f) or {}).items() if v is not None
+            }
         config.update(overrides)
     return config
 
@@ -223,7 +224,14 @@ def claude(prompt: str, project_dir: Path, allowed_tools: str = _EDIT_TOOLS) -> 
 
 def ensure_label(label: Label) -> None:
     """Ensure a label exists in the repo."""
-    gh("label", "create", label.value, "--force", "--description", LABEL_DESCRIPTIONS[label])
+    gh(
+        "label",
+        "create",
+        label.value,
+        "--force",
+        "--description",
+        LABEL_DESCRIPTIONS[label],
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -278,11 +286,13 @@ def summarize_feedback(feedback: str, max_len: int = 80) -> str:
     summary = re.sub(r"`(.+?)`", r"\1", summary)  # remove inline code
     summary = summary.lstrip("- ").lstrip("* ")  # remove list markers
     if len(summary) > max_len:
-        summary = summary[:max_len - 1] + "…"
+        summary = summary[: max_len - 1] + "…"
     return summary
 
 
-def format_review_comment(review_log: list[dict], converged: bool, max_iterations: int) -> str:
+def format_review_comment(
+    review_log: list[dict], converged: bool, max_iterations: int
+) -> str:
     """Format the review trail as a readable GitHub comment."""
     total = len(review_log)
     approved_count = sum(1 for r in review_log if r["approved"])
@@ -321,7 +331,9 @@ def format_review_comment(review_log: list[dict], converged: bool, max_iteration
             lines.append("")
         else:
             lines.append(f"<details>")
-            lines.append(f"<summary>{icon} <strong>Iteration {iteration}</strong> — {label}</summary>")
+            lines.append(
+                f"<summary>{icon} <strong>Iteration {iteration}</strong> — {label}</summary>"
+            )
             lines.append("")
             lines.append(feedback)
             lines.append("")
@@ -379,7 +391,9 @@ def cmd_analyze(project_dir: Path, config: dict) -> None:
     ensure_label(Label.NEEDS_HUMAN_REVIEW)
 
     # Fetch existing open issue titles to avoid duplicates
-    existing_json = gh("issue", "list", "--state", "open", "--json", "title", "--limit", "2000")
+    existing_json = gh(
+        "issue", "list", "--state", "open", "--json", "title", "--limit", "2000"
+    )
     existing_titles = {i["title"] for i in json.loads(existing_json)}
 
     created = 0
@@ -405,7 +419,9 @@ def cmd_analyze(project_dir: Path, config: dict) -> None:
         created += 1
 
     skipped = len(issues) - created
-    log(f"✅ {created} created, {skipped} skipped. Add '{Label.READY_TO_FIX}' when ready.")
+    log(
+        f"✅ {created} created, {skipped} skipped. Add '{Label.READY_TO_FIX}' when ready."
+    )
 
 
 def cmd_fix(project_dir: Path, config: dict, issue_number: int | None = None) -> None:
@@ -414,23 +430,34 @@ def cmd_fix(project_dir: Path, config: dict, issue_number: int | None = None) ->
 
     # Get issues to fix
     if issue_number:
-        issues_json = gh("issue", "view", str(issue_number), "--json", "number,title,body,labels")
+        issues_json = gh(
+            "issue", "view", str(issue_number), "--json", "number,title,body,labels"
+        )
         issue = json.loads(issues_json)
         labels = {l["name"] for l in issue.get("labels", [])}
         if Label.READY_TO_FIX not in labels:
-            log(f"⚠️  Issue #{issue_number} is not labeled '{Label.READY_TO_FIX}'. Skipping.")
+            log(
+                f"⚠️  Issue #{issue_number} is not labeled '{Label.READY_TO_FIX}'. Skipping."
+            )
             return
         if Label.AGENT_FIX_IN_PROGRESS in labels:
-            log(f"⚠️  Issue #{issue_number} already has '{Label.AGENT_FIX_IN_PROGRESS}'. Skipping.")
+            log(
+                f"⚠️  Issue #{issue_number} already has '{Label.AGENT_FIX_IN_PROGRESS}'. Skipping."
+            )
             return
         issues = [issue]
     else:
         issues_json = gh(
-            "issue", "list",
-            "--label", Label.READY_TO_FIX,
-            "--search", f"-label:{Label.AGENT_FIX_IN_PROGRESS}",
-            "--json", "number,title,body",
-            "--limit", "100",
+            "issue",
+            "list",
+            "--label",
+            Label.READY_TO_FIX,
+            "--search",
+            f"-label:{Label.AGENT_FIX_IN_PROGRESS}",
+            "--json",
+            "number,title,body",
+            "--limit",
+            "100",
         )
         issues = json.loads(issues_json)
 
@@ -457,14 +484,21 @@ def fix_single_issue(
     fix_start = time.monotonic()
     log(f"🔧 #{number} {title}")
 
+    # Create branch off the repo's default branch (not whatever is currently checked out).
+    # Pull before claiming the issue so a network failure doesn't leave the lock label stuck.
+    default_branch = gh(
+        "repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name"
+    )
+    git("checkout", default_branch)
+    git("pull", "--ff-only", "origin", default_branch)
+
     # Claim the issue — add lock label
     ensure_label(Label.AGENT_FIX_IN_PROGRESS)
     gh("issue", "edit", str(number), "--add-label", Label.AGENT_FIX_IN_PROGRESS)
 
-    # Create branch off the repo's default branch (not whatever is currently checked out)
-    default_branch = gh("repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name")
-    git("checkout", default_branch)
+    # -B resets the branch if a prior attempt left it behind
     git("checkout", "-B", branch)
+
     pr_opened = False
 
     try:
@@ -498,18 +532,22 @@ def fix_single_issue(
                 + f"\n\n## Diff to review\n\n{diff}"
             )
             if config["context"]:
-                review_prompt = f"Project context:\n{config['context']}\n\n{review_prompt}"
+                review_prompt = (
+                    f"Project context:\n{config['context']}\n\n{review_prompt}"
+                )
 
             t0 = time.monotonic()
             feedback = claude(review_prompt, project_dir)
             review_elapsed = int(time.monotonic() - t0)
             approved = bool(re.search(r"\bLGTM\b", feedback, re.IGNORECASE))
 
-            review_log.append({
-                "iteration": iteration,
-                "approved": approved,
-                "feedback": feedback,
-            })
+            review_log.append(
+                {
+                    "iteration": iteration,
+                    "approved": approved,
+                    "feedback": feedback,
+                }
+            )
 
             if approved:
                 log_step(f"🔎 Review {iteration}/{max_iterations} — ✅ Approved ({review_elapsed}s)")
@@ -517,7 +555,10 @@ def fix_single_issue(
                 break
 
             is_last_iteration = iteration >= max_iterations
-            log_step(f"🔎 Review {iteration}/{max_iterations} — 🔄 Changes requested ({review_elapsed}s)", last=is_last_iteration)
+            log_step(
+                f"🔎 Review {iteration}/{max_iterations} — 🔄 Changes requested ({review_elapsed}s)",
+                last=is_last_iteration,
+            )
             log_detail(summarize_feedback(feedback), last_step=is_last_iteration)
 
             if is_last_iteration:
@@ -538,9 +579,14 @@ def fix_single_issue(
         diff_check = git("diff", "--cached")
         if not diff_check:
             log_step(f"⚠️  No changes for #{number}. May already be fixed.", last=True)
-            gh("issue", "comment", str(number), "--body",
-               "Agent attempted a fix but no changes were needed. This issue may already be resolved.\n\n"
-               "Removing `ready-to-fix` — re-add it to retry, or close the issue if it's resolved.")
+            gh(
+                "issue",
+                "comment",
+                str(number),
+                "--body",
+                "Agent attempted a fix but no changes were needed. This issue may already be resolved.\n\n"
+                "Removing `ready-to-fix` — re-add it to retry, or close the issue if it's resolved.",
+            )
             gh("issue", "edit", str(number), "--remove-label", Label.READY_TO_FIX)
             return
 
@@ -550,10 +596,14 @@ def fix_single_issue(
         # Open PR — "Fixes #N" will close the issue on merge
         pr_body = f"Fixes #{number}"
         gh(
-            "pr", "create",
-            "--title", f"Fix #{number}: {title}",
-            "--body", pr_body,
-            "--head", branch,
+            "pr",
+            "create",
+            "--title",
+            f"Fix #{number}: {title}",
+            "--body",
+            pr_body,
+            "--head",
+            branch,
         )
 
         # Post review trail as a PR comment
@@ -569,7 +619,13 @@ def fix_single_issue(
         git("checkout", default_branch)
         if not pr_opened:
             git("branch", "-D", branch)
-            gh("issue", "edit", str(number), "--remove-label", Label.AGENT_FIX_IN_PROGRESS)
+            gh(
+                "issue",
+                "edit",
+                str(number),
+                "--remove-label",
+                Label.AGENT_FIX_IN_PROGRESS,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -596,18 +652,25 @@ def cmd_watch(
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
-    log(f"👀 Watching {project_dir.name} (interval={interval}s, max_open={max_open_issues})")
-    log(f"   Press Ctrl+C to stop gracefully.")
+    log(
+        f"👀 Watching {project_dir.name} (interval={interval}s, max_open={max_open_issues})"
+    )
+    log("   Press Ctrl+C to stop gracefully.")
     print()
 
     while not stopping:
         # Step 1: Fix any ready-to-fix issues
         ready_json = gh(
-            "issue", "list",
-            "--label", Label.READY_TO_FIX,
-            "--search", f"-label:{Label.AGENT_FIX_IN_PROGRESS}",
-            "--json", "number,title",
-            "--limit", "100",
+            "issue",
+            "list",
+            "--label",
+            Label.READY_TO_FIX,
+            "--search",
+            f"-label:{Label.AGENT_FIX_IN_PROGRESS}",
+            "--json",
+            "number,title",
+            "--limit",
+            "100",
         )
         ready_issues = json.loads(ready_json)
 
@@ -620,17 +683,25 @@ def cmd_watch(
 
         # Step 2: Analyze if queue is below cap
         open_json = gh(
-            "issue", "list",
-            "--label", Label.NEEDS_HUMAN_REVIEW,
-            "--json", "number",
-            "--limit", "100",
+            "issue",
+            "list",
+            "--label",
+            Label.NEEDS_HUMAN_REVIEW,
+            "--json",
+            "number",
+            "--limit",
+            "100",
         )
         open_count = len(json.loads(open_json))
 
         if open_count >= max_open_issues:
-            log(f"⏸️  {open_count} issue(s) awaiting review (cap: {max_open_issues}) — skipping analysis")
+            log(
+                f"⏸️  {open_count} issue(s) awaiting review (cap: {max_open_issues}) — skipping analysis"
+            )
         else:
-            log(f"🔍 {open_count} issue(s) awaiting review (cap: {max_open_issues}) — running analysis")
+            log(
+                f"🔍 {open_count} issue(s) awaiting review (cap: {max_open_issues}) — running analysis"
+            )
             cmd_analyze(project_dir, config)
 
         if stopping:
@@ -666,7 +737,8 @@ def main() -> None:
         """),
     )
     parser.add_argument(
-        "--project-dir", "-d",
+        "--project-dir",
+        "-d",
         type=Path,
         default=Path.cwd(),
         help="Path to the project (default: current directory)",
@@ -677,11 +749,20 @@ def main() -> None:
     sub.add_parser("analyze", help="Analyze codebase and create GitHub issues")
 
     fix_parser = sub.add_parser("fix", help="Fix ready-to-fix issues")
-    fix_parser.add_argument("--issue", "-i", type=int, help="Fix a specific issue number")
+    fix_parser.add_argument(
+        "--issue", "-i", type=int, help="Fix a specific issue number"
+    )
 
     watch_parser = sub.add_parser("watch", help="Poll continuously for work")
-    watch_parser.add_argument("--interval", type=int, default=300, help="Seconds between polls (default: 300)")
-    watch_parser.add_argument("--max-open-issues", type=int, default=3, help="Max issues awaiting review before pausing analysis (default: 3)")
+    watch_parser.add_argument(
+        "--interval", type=int, default=300, help="Seconds between polls (default: 300)"
+    )
+    watch_parser.add_argument(
+        "--max-open-issues",
+        type=int,
+        default=3,
+        help="Max issues awaiting review before pausing analysis (default: 3)",
+    )
 
     args = parser.parse_args()
     project_dir = args.project_dir.resolve()
@@ -692,7 +773,12 @@ def main() -> None:
     elif args.command == "fix":
         cmd_fix(project_dir, config, issue_number=args.issue)
     elif args.command == "watch":
-        cmd_watch(project_dir, config, interval=args.interval, max_open_issues=args.max_open_issues)
+        cmd_watch(
+            project_dir,
+            config,
+            interval=args.interval,
+            max_open_issues=args.max_open_issues,
+        )
 
 
 if __name__ == "__main__":

@@ -15,12 +15,12 @@ Analyzer Agent → Human Triage → Fix + Review Loop → PR → Human Review �
 
 ## Labels
 
-| Label | Type | Set by | Lifecycle |
-|---|---|---|---|
-| `agent-reported` | Origin | Analyzer | Permanent |
-| `needs-human-review` | Status | Analyzer | Until human triages |
-| `ready-to-fix` | Trigger | Human | Permanent (signals approval) |
-| `agent-fix-in-progress` | Lock | Fixer | Permanent |
+| Label                   | Type    | Set by   | Lifecycle                    |
+| ----------------------- | ------- | -------- | ---------------------------- |
+| `agent-reported`        | Origin  | Analyzer | Permanent                    |
+| `needs-human-review`    | Status  | Analyzer | Until human triages          |
+| `ready-to-fix`          | Trigger | Human    | Permanent (signals approval) |
+| `agent-fix-in-progress` | Lock    | Fixer    | Permanent                    |
 
 Human-authored issues skip `agent-reported` and `needs-human-review` — just add `ready-to-fix`.
 
@@ -55,7 +55,7 @@ agent-loop fix --issue 42
 
 # Watch mode — poll continuously
 agent-loop watch
-agent-loop watch --interval 600           # poll every 10 minutes
+agent-loop watch --interval 1800          # poll every 30 minutes
 agent-loop watch --max-open-issues 5      # pause analysis when 5+ issues await review
 
 # Point at a different project
