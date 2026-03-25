@@ -110,19 +110,33 @@ DEFAULT_CONFIG = {
         4. Edge cases: Are realistic boundary conditions and error cases handled?
         5. Completeness: Is every aspect of the issue addressed? Are there leftover TODOs or gaps?
 
-        Structure your response as:
+        Structure your response EXACTLY as follows (use these headings verbatim):
 
-        **Approach**: <your assessment — is this the right solution, or is there a better way?>
-        **Correctness**: <your finding>
-        **Regressions**: <your finding>
-        **Edge cases**: <your finding>
-        **Completeness**: <your finding>
+        #### 🧭 Approach
+        <your assessment — is this the right solution, or is there a better way?>
+
+        #### ✅ Correctness
+        <your finding>
+
+        #### 🔁 Regressions
+        <your finding>
+
+        #### 🧪 Edge Cases
+        <your finding>
+
+        #### 📋 Completeness
+        <your finding>
+
+        ---
 
         **Verdict**: LGTM or CONCERNS
 
-        If your verdict is CONCERNS, describe EXACTLY what needs to change — be specific
-        about what code to add, modify, or remove. Vague feedback like "needs verification"
-        is not acceptable; state what the fix should be.
+        If your verdict is CONCERNS, add a final section:
+
+        #### 🔧 Required Changes
+        <describe EXACTLY what needs to change — be specific about what code to add,
+        modify, or remove. Vague feedback like "needs verification" is not acceptable.>
+
         Focus on correctness — do NOT nitpick style.
     """),
     "context": "",
