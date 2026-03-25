@@ -83,6 +83,9 @@ DEFAULT_CONFIG = {
         {body}
 
         Make the minimal changes needed to address this issue.
+        Prefer the simplest solution. If a problem can be avoided entirely (e.g. by
+        choosing a different value, removing a constraint, or sidestepping the issue),
+        that is better than adding error handling for a problem that doesn't need to exist.
     """),
     "review_prompt": textwrap.dedent("""\
         Review the current git diff as a fix for a GitHub issue.
@@ -91,10 +94,15 @@ DEFAULT_CONFIG = {
         problems before a human sees this PR. If you are unsure about something, flag it
         as a concern — do not give the benefit of the doubt.
 
+        Be proportionate. Focus on problems that will realistically occur, not hypothetical
+        scenarios that require extreme conditions. If an edge case can be avoided entirely
+        by a simpler approach (e.g. using a different value, removing an unnecessary
+        constraint), suggest that simpler approach instead of requesting error handling.
+
         You MUST check each of the following and state your finding for each:
         1. Correctness: Does the change actually fix the described issue? Fully, not partially?
         2. Regressions: Could this break existing behavior? Consider all callers and code paths.
-        3. Edge cases: Are boundary conditions, empty inputs, error cases, and concurrent access handled?
+        3. Edge cases: Are realistic boundary conditions and error cases handled?
         4. Completeness: Is every aspect of the issue addressed? Are there leftover TODOs or gaps?
 
         Structure your response as:
@@ -350,7 +358,8 @@ def fix_single_issue(
             fix_feedback_prompt = (
                 f"Your previous fix received this review feedback:\n\n{feedback}\n\n"
                 f"Original issue:\nTitle: {title}\nDescription:\n{body}\n\n"
-                f"Please address the concerns."
+                f"Please address the concerns. Prefer the simplest solution — if a problem\n"
+                f"can be eliminated rather than handled, do that instead."
             )
             print("  🤖 Agent is addressing feedback...")
             claude(fix_feedback_prompt, project_dir)
