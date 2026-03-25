@@ -306,6 +306,7 @@ def fix_single_issue(
     # Create branch
     default_branch = git("rev-parse", "--abbrev-ref", "HEAD")
     git("checkout", "-b", branch)
+    pr_opened = False
 
     try:
         # Initial fix
@@ -375,8 +376,6 @@ def fix_single_issue(
         diff_check = git("diff", "--cached")
         if not diff_check:
             print(f"\n  ⚠️  No changes for #{number}. Skipping PR.")
-            git("checkout", default_branch)
-            git("branch", "-D", branch)
             return
 
         git("commit", "-m", f"fix: address issue #{number} - {title}")
@@ -402,11 +401,14 @@ def fix_single_issue(
         )
         gh("pr", "comment", branch, "--body", review_comment)
 
+        pr_opened = True
         print(f"\n  🎉 PR opened for #{number}!")
 
     finally:
-        # Always return to default branch
+        # Always return to default branch and clean up if no PR was opened
         git("checkout", default_branch)
+        if not pr_opened:
+            git("branch", "-D", branch)
 
 
 # ---------------------------------------------------------------------------
