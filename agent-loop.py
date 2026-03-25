@@ -502,6 +502,86 @@ def fix_single_issue(
 
 
 # ---------------------------------------------------------------------------
+# Watch
+# ---------------------------------------------------------------------------
+
+
+def cmd_watch(
+    project_dir: Path,
+    config: dict,
+    interval: int,
+    max_open_issues: int,
+) -> None:
+    """Poll for work: fix ready issues, analyze when queue is low."""
+    import signal
+    from datetime import datetime
+
+    stopping = False
+
+    def handle_signal(sig: int, frame: object) -> None:
+        nonlocal stopping
+        stopping = True
+        print(f"\n⏹️  Stopping after current step completes...")
+
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
+    def log(msg: str) -> None:
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"[{timestamp}] {msg}")
+
+    log(f"👀 Watching {project_dir.name} (interval={interval}s, max_open={max_open_issues})")
+    log(f"   Press Ctrl+C to stop gracefully.\n")
+
+    while not stopping:
+        # Step 1: Fix any ready-to-fix issues
+        ready_json = gh(
+            "issue", "list",
+            "--label", Label.READY_TO_FIX,
+            "--search", f"-label:{Label.AGENT_FIX_IN_PROGRESS}",
+            "--json", "number,title",
+            "--limit", "100",
+        )
+        ready_issues = json.loads(ready_json)
+
+        if ready_issues:
+            log(f"🔧 {len(ready_issues)} issue(s) ready to fix")
+            cmd_fix(project_dir, config)
+            if stopping:
+                break
+        else:
+            log("💤 No issues ready to fix")
+
+        # Step 2: Analyze if queue is below cap
+        open_json = gh(
+            "issue", "list",
+            "--label", Label.NEEDS_HUMAN_REVIEW,
+            "--json", "number",
+            "--limit", "100",
+        )
+        open_count = len(json.loads(open_json))
+
+        if open_count >= max_open_issues:
+            log(f"⏸️  {open_count} issue(s) awaiting review (cap: {max_open_issues}) — skipping analysis")
+        else:
+            log(f"🔍 {open_count} issue(s) awaiting review (cap: {max_open_issues}) — running analysis")
+            cmd_analyze(project_dir, config)
+
+        if stopping:
+            break
+
+        # Sleep in small increments so Ctrl+C is responsive
+        log(f"😴 Sleeping {interval}s...\n")
+        for _ in range(interval):
+            if stopping:
+                break
+            import time
+            time.sleep(1)
+
+    log("👋 Stopped.")
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -515,7 +595,8 @@ def main() -> None:
               1. agent-loop analyze           → creates GitHub issues
               2. (human adds 'ready-to-fix' label to approved issues)
               3. agent-loop fix               → fixes ready issues and opens PRs
-              3. agent-loop fix --issue 42    → fix a specific issue
+              4. agent-loop fix --issue 42    → fix a specific issue
+              5. agent-loop watch             → poll continuously
         """),
     )
     parser.add_argument(
@@ -532,6 +613,10 @@ def main() -> None:
     fix_parser = sub.add_parser("fix", help="Fix ready-to-fix issues")
     fix_parser.add_argument("--issue", "-i", type=int, help="Fix a specific issue number")
 
+    watch_parser = sub.add_parser("watch", help="Poll continuously for work")
+    watch_parser.add_argument("--interval", type=int, default=300, help="Seconds between polls (default: 300)")
+    watch_parser.add_argument("--max-open-issues", type=int, default=3, help="Max issues awaiting review before pausing analysis (default: 3)")
+
     args = parser.parse_args()
     project_dir = args.project_dir.resolve()
     config = load_config(project_dir)
@@ -540,6 +625,8 @@ def main() -> None:
         cmd_analyze(project_dir, config)
     elif args.command == "fix":
         cmd_fix(project_dir, config, issue_number=args.issue)
+    elif args.command == "watch":
+        cmd_watch(project_dir, config, interval=args.interval, max_open_issues=args.max_open_issues)
 
 
 if __name__ == "__main__":
