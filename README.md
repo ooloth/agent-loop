@@ -9,8 +9,8 @@ Analyzer Agent → Human Triage → Fix + Review Loop → PR → Human Review �
 ```
 
 1. `agent-loop analyze` — agent scans codebase, creates GitHub issues
-2. Human reviews issues, swaps `needs-human-review` for `human-approved`
-3. `agent-loop fix` — picks up approved issues, runs fix + review loop, opens PR
+2. Human reviews issues, adds `ready-to-fix` label to approved ones
+3. `agent-loop fix` — picks up ready issues, runs fix + review loop, opens PR
 4. Human reviews the PR, merges it (which closes the issue)
 
 ## Labels
@@ -18,11 +18,11 @@ Analyzer Agent → Human Triage → Fix + Review Loop → PR → Human Review �
 | Label | Type | Set by | Lifecycle |
 |---|---|---|---|
 | `agent-reported` | Origin | Analyzer | Permanent |
-| `needs-human-review` | Status | Analyzer | Removed when human approves |
-| `human-approved` | Audit | Human | Permanent |
+| `needs-human-review` | Status | Analyzer | Until human triages |
+| `ready-to-fix` | Trigger | Human | Permanent (signals approval) |
 | `agent-fix-in-progress` | Lock | Fixer | Permanent |
 
-All labels persist on closed issues as a full audit trail.
+Human-authored issues skip `agent-reported` and `needs-human-review` — just add `ready-to-fix`.
 
 ## Requirements
 
@@ -37,7 +37,7 @@ All labels persist on closed issues as a full audit trail.
 cd /path/to/project
 agent-loop analyze
 
-# Fix all human-approved issues
+# Fix all ready-to-fix issues
 agent-loop fix
 
 # Fix a specific issue

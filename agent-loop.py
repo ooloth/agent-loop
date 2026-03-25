@@ -9,8 +9,8 @@ agent-loop: analyze a codebase for issues, fix them with review, open PRs.
 
 Workflow:
   1. analyze  — agent scans codebase, creates GitHub issues
-  2. (human reviews on GitHub, approves issues for fixing)
-  3. fix      — picks up approved issues, runs fix+review loop, opens PRs
+  2. (human reviews on GitHub, adds 'ready-to-fix')
+  3. fix      — picks up ready-to-fix issues, runs fix+review loop, opens PRs
 """
 
 import argparse
@@ -30,26 +30,30 @@ import yaml
 
 
 class Label(StrEnum):
-    """Issue labels tracking origin, approval, and workflow state.
+    """Issue labels tracking origin and workflow state.
 
-    Lifecycle:
-      REPORTED (analyzer)  →  APPROVED (human)  →  FIX_IN_PROGRESS (fixer)  →  issue closed by PR merge
-                                                                                (all labels persist)
+    Agent issue lifecycle:
+      agent-reported, needs-human-review  →  ready-to-fix  →  agent-fix-in-progress  →  closed by PR merge
+
+    Human issue lifecycle:
+      ready-to-fix  →  agent-fix-in-progress  →  closed by PR merge
     """
 
-    # Permanent — origin and audit trail
+    # Permanent — origin
     AGENT_REPORTED = "agent-reported"
-    HUMAN_APPROVED = "human-approved"
 
     # Transient — workflow state
     NEEDS_HUMAN_REVIEW = "needs-human-review"
+    READY_TO_FIX = "ready-to-fix"
+
+    # Permanent — lock
     AGENT_FIX_IN_PROGRESS = "agent-fix-in-progress"
 
 
 LABEL_DESCRIPTIONS = {
     Label.AGENT_REPORTED: "Issue found by automated analysis",
-    Label.HUMAN_APPROVED: "Reviewed and approved by a human",
     Label.NEEDS_HUMAN_REVIEW: "Awaiting human triage",
+    Label.READY_TO_FIX: "Approved for agent to fix",
     Label.AGENT_FIX_IN_PROGRESS: "Agent is working on a fix",
 }
 
@@ -213,11 +217,11 @@ def cmd_analyze(project_dir: Path, config: dict) -> None:
         print(f"  📋 Created: {title}")
 
     print(f"\n✅ Created {len(issues)} issue(s).")
-    print(f"   Review them on GitHub: swap '{Label.NEEDS_HUMAN_REVIEW}' for '{Label.HUMAN_APPROVED}' when ready.")
+    print(f"   Review them on GitHub and add '{Label.READY_TO_FIX}' when ready.")
 
 
 def cmd_fix(project_dir: Path, config: dict, issue_number: int | None = None) -> None:
-    """Pick up human-approved issues and run the fix+review loop."""
+    """Pick up ready-to-fix issues and run the fix+review loop."""
     max_iterations = config["max_iterations"]
 
     # Get issues to fix
@@ -225,8 +229,8 @@ def cmd_fix(project_dir: Path, config: dict, issue_number: int | None = None) ->
         issues_json = gh("issue", "view", str(issue_number), "--json", "number,title,body,labels")
         issue = json.loads(issues_json)
         labels = {l["name"] for l in issue.get("labels", [])}
-        if Label.HUMAN_APPROVED not in labels:
-            print(f"⚠️  Issue #{issue_number} is not labeled '{Label.HUMAN_APPROVED}'. Skipping.")
+        if Label.READY_TO_FIX not in labels:
+            print(f"⚠️  Issue #{issue_number} is not labeled '{Label.READY_TO_FIX}'. Skipping.")
             return
         if Label.AGENT_FIX_IN_PROGRESS in labels:
             print(f"⚠️  Issue #{issue_number} already has '{Label.AGENT_FIX_IN_PROGRESS}'. Skipping.")
@@ -235,7 +239,7 @@ def cmd_fix(project_dir: Path, config: dict, issue_number: int | None = None) ->
     else:
         issues_json = gh(
             "issue", "list",
-            "--label", Label.HUMAN_APPROVED,
+            "--label", Label.READY_TO_FIX,
             "--search", f"-label:{Label.AGENT_FIX_IN_PROGRESS}",
             "--json", "number,title,body",
             "--limit", "100",
@@ -243,7 +247,7 @@ def cmd_fix(project_dir: Path, config: dict, issue_number: int | None = None) ->
         issues = json.loads(issues_json)
 
     if not issues:
-        print(f"No issues labeled '{Label.HUMAN_APPROVED}' (without '{Label.AGENT_FIX_IN_PROGRESS}') found.")
+        print(f"No issues labeled '{Label.READY_TO_FIX}' (without '{Label.AGENT_FIX_IN_PROGRESS}') found.")
         return
 
     print(f"Found {len(issues)} issue(s) to fix.\n")
@@ -366,10 +370,10 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""\
             workflow:
-              1. agent-loop analyze         → creates GitHub issues
-              2. (human reviews on GitHub, swaps 'needs-human-review' for 'human-approved')
-              3. agent-loop fix             → fixes approved issues and opens PRs
-              3. agent-loop fix --issue 42  → fix a specific issue
+              1. agent-loop analyze           → creates GitHub issues
+              2. (human adds 'ready-to-fix' label to approved issues)
+              3. agent-loop fix               → fixes ready issues and opens PRs
+              3. agent-loop fix --issue 42    → fix a specific issue
         """),
     )
     parser.add_argument(
@@ -383,7 +387,7 @@ def main() -> None:
 
     sub.add_parser("analyze", help="Analyze codebase and create GitHub issues")
 
-    fix_parser = sub.add_parser("fix", help="Fix human-approved issues")
+    fix_parser = sub.add_parser("fix", help="Fix ready-to-fix issues")
     fix_parser.add_argument("--issue", "-i", type=int, help="Fix a specific issue number")
 
     args = parser.parse_args()
