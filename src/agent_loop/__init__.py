@@ -1,9 +1,3 @@
-#!/usr/bin/env -S uv run
-# /// script
-# requires-python = ">=3.12"
-# dependencies = ["PyYAML"]
-# ///
-
 """
 agent-loop: analyze a codebase for issues, fix them with review, open PRs.
 

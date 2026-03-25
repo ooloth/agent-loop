@@ -1,0 +1,13 @@
+[project]
+name = "agent-loop"
+version = "0.1.0"
+description = "Analyze a codebase for issues, fix them with AI review, open PRs."
+requires-python = ">=3.12"
+dependencies = ["PyYAML"]
+
+[project.scripts]
+agent-loop = "agent_loop:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
