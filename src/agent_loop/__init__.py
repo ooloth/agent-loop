@@ -127,22 +127,25 @@ DEFAULT_CONFIG = {
         4. Edge cases: Are realistic boundary conditions and error cases handled?
         5. Completeness: Is every aspect of the issue addressed? Are there leftover TODOs or gaps?
 
-        Structure your response EXACTLY as follows (use these headings verbatim):
+        Structure your response EXACTLY as follows (use these headings verbatim).
+        Use bullet lists under each heading — no paragraphs. One finding per bullet.
 
         #### 🧭 Approach
-        <your assessment — is this the right solution, or is there a better way?>
+        - <your assessment — is this the right solution, or is there a better way?>
 
         #### ✅ Correctness
-        <your finding>
+        - <finding>
+        - <finding>
 
         #### 🔁 Regressions
-        <your finding>
+        - <finding>
 
         #### 🧪 Edge Cases
-        <your finding>
+        - <finding>
+        - <finding>
 
         #### 📋 Completeness
-        <your finding>
+        - <finding>
 
         ---
 
@@ -151,8 +154,8 @@ DEFAULT_CONFIG = {
         If your verdict is CONCERNS, add a final section:
 
         #### 🔧 Required Changes
-        <describe EXACTLY what needs to change — be specific about what code to add,
-        modify, or remove. Vague feedback like "needs verification" is not acceptable.>
+        - <describe EXACTLY what needs to change — be specific about what code to add,
+          modify, or remove. Vague feedback like "needs verification" is not acceptable.>
 
         Focus on correctness — do NOT nitpick style.
     """),
