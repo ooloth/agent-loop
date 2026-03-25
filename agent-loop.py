@@ -400,7 +400,7 @@ def fix_single_issue(
     # Create branch off the repo's default branch (not whatever is currently checked out)
     default_branch = gh("repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name")
     git("checkout", default_branch)
-    git("checkout", "-b", branch)
+    git("checkout", "-B", branch)
     pr_opened = False
 
     try:
@@ -497,6 +497,7 @@ def fix_single_issue(
         git("checkout", default_branch)
         if not pr_opened:
             git("branch", "-D", branch)
+            gh("issue", "edit", str(number), "--remove-label", Label.AGENT_FIX_IN_PROGRESS)
 
 
 # ---------------------------------------------------------------------------
