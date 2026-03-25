@@ -32,6 +32,7 @@ DEFAULT_CONFIG = {
         "needs_review": "needs-review",
         "ready_to_fix": "ready-to-fix",
         "in_progress": "in-progress",
+        "ready_for_human_review": "ready-for-human-review",
     },
     "analyze_prompt": textwrap.dedent("""\
         Analyze this codebase for issues. For each issue found, respond with a JSON array
@@ -114,7 +115,7 @@ def git(*args: str) -> str:
 def claude(prompt: str, project_dir: Path) -> str:
     """Run a prompt through the claude CLI."""
     result = subprocess.run(
-        ["claude", "--print", "--no-input", "--prompt", prompt],
+        ["claude", "-p", prompt],
         capture_output=True,
         text=True,
         cwd=project_dir,
@@ -175,8 +176,12 @@ def cmd_analyze(project_dir: Path, config: dict) -> None:
         body = issue.get("body", "")
         extra_labels = issue.get("labels", [])
         all_labels = [label] + extra_labels
-        label_args = [arg for l in all_labels for arg in ("--label", l)]
 
+        # Ensure all labels exist
+        for l in extra_labels:
+            gh("label", "create", l, "--force", "--description", "")
+
+        label_args = [arg for l in all_labels for arg in ("--label", l)]
         gh("issue", "create", "--title", title, "--body", body, *label_args)
         print(f"  📋 Created: {title}")
 
@@ -294,12 +299,14 @@ def fix_single_issue(
         git("push", "-u", "origin", branch)
 
         # Open PR
+        label_pr = config["labels"]["ready_for_human_review"]
+        gh("label", "create", label_pr, "--force", "--description", "Agent-reviewed PR ready for human")
         pr_body = f"Fixes #{number}\n\nAgent review {'passed' if iteration < max_iterations else f'did not converge after {max_iterations} iterations'}."
         gh(
             "pr", "create",
             "--title", f"Fix #{number}: {title}",
             "--body", pr_body,
-            "--label", "ready-for-human-review",
+            "--label", config["labels"]["ready_for_human_review"],
             "--head", branch,
         )
         print(f"\n  🎉 PR opened for #{number}!")
