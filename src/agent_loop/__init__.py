@@ -471,11 +471,15 @@ def fix_single_issue(
         # Commit and push
         diff_check = git("diff", "--cached")
         if not diff_check:
-            print(f"\n  ⚠️  No changes for #{number}. Skipping PR.")
+            print(f"\n  ⚠️  No changes for #{number}. May already be fixed.")
+            gh("issue", "comment", str(number), "--body",
+               "Agent attempted a fix but no changes were needed. This issue may already be resolved.\n\n"
+               "Removing `ready-to-fix` — re-add it to retry, or close the issue if it's resolved.")
+            gh("issue", "edit", str(number), "--remove-label", Label.READY_TO_FIX)
             return
 
         git("commit", "-m", f"fix: address issue #{number} - {title}")
-        git("push", "-u", "origin", branch)
+        git("push", "--force-with-lease", "-u", "origin", branch)
 
         # Open PR — "Fixes #N" will close the issue on merge
         pr_body = f"Fixes #{number}"
