@@ -1,11 +1,10 @@
 import re
 import time
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TypedDict
 
+from agent_loop.domain.protocols import AgentBackend, VCSBackend
 from agent_loop.io.logging import log_detail, log_step
-from agent_loop.io.shell import claude, git
 
 
 class ReviewEntry(TypedDict):
@@ -18,7 +17,9 @@ class ReviewEntry(TypedDict):
 class ImplementAndReviewInput:
     title: str
     body: str
-    project_dir: Path
+    implement_agent: AgentBackend
+    review_agent: AgentBackend
+    vcs: VCSBackend
     max_iterations: int
     context: str
     fix_prompt_template: str
@@ -80,8 +81,8 @@ def implement_and_review(task: ImplementAndReviewInput) -> ImplementAndReviewRes
         fix_prompt = f"Project context:\n{task.context}\n\n{fix_prompt}"
 
     log_step("🤖 Implementing fix...")
-    claude(fix_prompt, task.project_dir)
-    git("add", "-A")
+    task.implement_agent.run(fix_prompt)
+    task.vcs.stage_all()
 
     # Review loop
     iteration = 0
@@ -91,7 +92,7 @@ def implement_and_review(task: ImplementAndReviewInput) -> ImplementAndReviewRes
     while iteration < task.max_iterations:
         iteration += 1
 
-        diff = git("diff", "--cached")
+        diff = task.vcs.diff_staged()
         if not diff:
             log_step("⚠️  No changes were made", last=True)
             break
@@ -105,7 +106,7 @@ def implement_and_review(task: ImplementAndReviewInput) -> ImplementAndReviewRes
             review_prompt = f"Project context:\n{task.context}\n\n{review_prompt}"
 
         t0 = time.monotonic()
-        feedback = claude(review_prompt, task.project_dir)
+        feedback = task.review_agent.run(review_prompt)
         review_elapsed = int(time.monotonic() - t0)
         approved = parse_review_verdict(feedback)
 
@@ -142,10 +143,10 @@ def implement_and_review(task: ImplementAndReviewInput) -> ImplementAndReviewRes
             f"can be eliminated rather than handled, do that instead."
         )
         log_step("🤖 Addressing feedback...")
-        claude(fix_feedback_prompt, task.project_dir)
-        git("add", "-A")
+        task.implement_agent.run(fix_feedback_prompt)
+        task.vcs.stage_all()
 
-    has_changes = bool(git("diff", "--cached"))
+    has_changes = bool(task.vcs.diff_staged())
     return ImplementAndReviewResult(
         review_log=review_log,
         converged=converged,
