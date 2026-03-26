@@ -1,11 +1,7 @@
 # VCSBackend Protocol
 
-The version-control port for the engine. Abstracts the minimal set of VCS
-operations the implement→review loop needs: staging changes and inspecting the
-staged diff.
-
-Workflow-level VCS operations (branching, committing, pushing) live outside the
-engine in `BranchSession` and are not part of this protocol.
+The version-control port. Abstracts all VCS operations used by the engine and
+fix pipeline: staging, diffing, branching, committing, and pushing.
 
 ---
 
@@ -13,8 +9,14 @@ engine in `BranchSession` and are not part of this protocol.
 
 ```
 VCSBackend:
-  stage_all()     -> void    -- stage all current changes (git add -A equivalent)
-  diff_staged()   -> string  -- return staged diff; empty string if no staged changes
+  stage_all()                          -> void    -- stage all changes (git add -A equivalent)
+  diff_staged()                        -> string  -- return staged diff; empty string if none
+  checkout(branch: string)             -> void    -- switch to an existing branch
+  pull(branch: string)                 -> void    -- pull latest from remote
+  checkout_new_branch(branch: string)  -> void    -- create/reset and switch to branch
+  commit(message: string)              -> void    -- commit staged changes
+  push(branch: string)                 -> void    -- push branch to remote
+  delete_branch(branch: string)        -> void    -- delete a local branch
 ```
 
 ---
@@ -25,17 +27,19 @@ VCSBackend:
 - `diff_staged()` returns an empty string (not null, not an error) when there
   are no staged changes. Callers use the empty-string check to detect "no work
   was done" and short-circuit the review loop.
-- Both methods operate on the current working directory.
+- `checkout_new_branch()` resets the branch if it already exists, so a prior
+  failed attempt doesn't block a retry.
+- `push()` uses force-with-lease semantics to avoid overwriting unexpected
+  remote changes while still allowing re-pushes of amended fix branches.
 
 ---
 
-## How it fits into ImplementAndReviewInput
+## How it fits in
 
-```
-ImplementAndReviewInput:
-  ...
-  vcs: VCSBackend
-```
+The engine uses `stage_all()` and `diff_staged()` via `ImplementAndReviewInput.vcs`.
+`BranchSession` uses the full protocol via `AppContext.vcs` for branch lifecycle
+management. Both take `VCSBackend` — the engine simply doesn't call the workflow
+methods, which is enforced by its own input type, not by a narrower protocol.
 
 ---
 
@@ -43,35 +47,7 @@ ImplementAndReviewInput:
 
 ### `GitBackend` (current)
 
-Implements `VCSBackend` and also exposes the workflow operations needed by
-`BranchSession`:
-
-```
-GitBackend:
-  -- VCSBackend protocol
-  stage_all()                      -> void
-  diff_staged()                    -> string
-
-  -- Workflow operations (used by BranchSession, not the engine)
-  checkout(branch: string)         -> void
-  pull(branch: string)             -> void
-  checkout_new_branch(branch: string) -> void  -- resets branch if it already exists
-  commit(message: string)          -> void
-  push(branch: string)             -> void     -- force-with-lease
-  delete_branch(branch: string)    -> void
-```
-
-#### Why `BranchSession` takes `GitBackend`, not `VCSBackend`
-
-`BranchSession` needs the workflow methods that are intentionally outside the
-`VCSBackend` protocol. Widening the protocol to include them would blur the
-engine/pipeline boundary — `VCSBackend` is scoped to what the engine needs,
-not what the full workflow needs.
-
-Until a second VCS adapter exists, taking the concrete `GitBackend` is the right
-call. If a `GitLabBackend` or similar is added, the natural step is either a
-second `WorkflowVCSBackend` protocol or a shared interface — not widening the
-existing engine protocol.
+Wraps the `git` CLI via `io/process.run()`.
 
 ### Future adapters
 

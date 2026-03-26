@@ -4,16 +4,10 @@ Handles branch creation, label locking, and cleanup so that fix_single_issue
 can focus on the issue-resolution logic rather than branch bookkeeping.
 """
 
-from __future__ import annotations
-
 from types import TracebackType
-from typing import TYPE_CHECKING
 
 from agent_loop.domain.issues import Issue
-from agent_loop.domain.protocols import IssueTracker
-
-if TYPE_CHECKING:
-    from agent_loop.io.adapters.git import GitBackend
+from agent_loop.domain.protocols import IssueTracker, VCSBackend
 
 
 class BranchSession:
@@ -30,7 +24,7 @@ class BranchSession:
         delete the branch and release the issue lock so it can be retried.
     """
 
-    def __init__(self, issue: Issue, tracker: IssueTracker, vcs: GitBackend) -> None:
+    def __init__(self, issue: Issue, tracker: IssueTracker, vcs: VCSBackend) -> None:
         self._issue = issue
         self._tracker = tracker
         self._vcs = vcs

@@ -111,9 +111,8 @@ IssueTracker.list_ready_issues()          (or get_issue for --issue N)
 ```
 
 `BranchSession` is a concrete context manager (not a protocol) that handles
-branch creation, checkout, and cleanup. It wraps the concrete VCS adapter for
-workflow-level git operations that sit outside the engine. See `specs/vcs-backend.md`
-for why this takes the concrete adapter rather than the `VCSBackend` protocol.
+branch creation, checkout, and cleanup. It takes `VCSBackend` for the
+workflow-level git operations that sit outside the engine.
 
 ### `watch` pipeline
 
@@ -136,7 +135,7 @@ AppContext:                     -- composition root; passed to every pipeline co
   project_dir:  path
   config:       Config
   tracker:      IssueTracker
-  vcs:          GitBackend     -- concrete (BranchSession needs workflow methods)
+  vcs:          VCSBackend
   read_agent:   AgentBackend   -- read-only; used by analyze + fix review
   edit_agent:   AgentBackend   -- edit access; used by fix implement
 

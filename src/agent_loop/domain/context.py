@@ -1,14 +1,8 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from agent_loop.domain.config import Config
-from agent_loop.domain.protocols import AgentBackend, IssueTracker
-
-if TYPE_CHECKING:
-    from agent_loop.io.adapters.git import GitBackend
+from agent_loop.domain.protocols import AgentBackend, IssueTracker, VCSBackend
 
 
 @dataclass(frozen=True)
@@ -22,6 +16,6 @@ class AppContext:
     project_dir: Path
     config: Config
     tracker: IssueTracker
-    vcs: GitBackend
+    vcs: VCSBackend
     read_agent: AgentBackend
     edit_agent: AgentBackend
