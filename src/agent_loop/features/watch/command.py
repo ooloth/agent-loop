@@ -1,11 +1,8 @@
-import json
 import signal
 import time
 
 from agent_loop.domain.context import AppContext
-from agent_loop.domain.labels import Label
 from agent_loop.io.logging import log
-from agent_loop.io.shell import gh
 from agent_loop.features.analyze.command import cmd_analyze
 from agent_loop.features.fix.command import cmd_fix
 
@@ -30,19 +27,7 @@ def cmd_watch(ctx: AppContext, interval: int, max_open_issues: int) -> None:
 
     while not stopping:
         # Step 1: Fix any ready-to-fix issues
-        ready_json = gh(
-            "issue",
-            "list",
-            "--label",
-            Label.READY_TO_FIX,
-            "--search",
-            f"-label:{Label.AGENT_FIX_IN_PROGRESS}",
-            "--json",
-            "number,title",
-            "--limit",
-            "100",
-        )
-        ready_issues = json.loads(ready_json)
+        ready_issues = ctx.tracker.list_ready_issues()
 
         if ready_issues:
             cmd_fix(ctx)
@@ -52,17 +37,7 @@ def cmd_watch(ctx: AppContext, interval: int, max_open_issues: int) -> None:
             log("💤 No issues ready to fix")
 
         # Step 2: Analyze if queue is below cap
-        open_json = gh(
-            "issue",
-            "list",
-            "--label",
-            Label.NEEDS_HUMAN_REVIEW,
-            "--json",
-            "number",
-            "--limit",
-            "100",
-        )
-        open_count = len(json.loads(open_json))
+        open_count = len(ctx.tracker.list_awaiting_review())
 
         if open_count >= max_open_issues:
             log(
