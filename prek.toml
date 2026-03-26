@@ -1,0 +1,29 @@
+# See: https://prek.j178.dev/configuration/
+
+[[repos]]
+# See: https://github.com/astral-sh/ruff-pre-commit?tab=readme-ov-file#using-ruff-with-prek
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.15.0"
+hooks = [
+  { id = "ruff-check", args = ["--fix"] },
+  { id = "ruff-format" },
+]
+
+[[repos]]
+# See: https://github.com/astral-sh/ty/issues/269#issuecomment-3669333114
+repo = "local"
+hooks = [
+  { id = "ty-check", name = "ty check", entry = "uv run ty check", language = "python", types=["python"], pass_filenames = true },
+]
+
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "detect-private-key" },
+  { id = "check-json" },
+  { id = "check-json5" },
+  { id = "check-toml" },
+  { id = "check-yaml" },
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+]
