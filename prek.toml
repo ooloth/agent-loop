@@ -19,3 +19,10 @@ hooks = [
   { id = "ruff-check", args = ["--fix"] },
   { id = "ruff-format" },
 ]
+
+[[repos]]
+# See: https://github.com/astral-sh/ty/issues/269#issuecomment-3669333114
+repo = "local"
+hooks = [
+  { id = "ty", name = "ty-check", entry = "uv run ty check", language = "python", types=["python"], pass_filenames = true },
+]
