@@ -42,8 +42,20 @@ class IssueTracker(Protocol):
         """Return issues approved for fixing that are not already claimed."""
         ...
 
+    def list_awaiting_review(self) -> list[Issue]:
+        """Return issues waiting for human review (backpressure check for the watch loop)."""
+        ...
+
     def get_issue(self, number: int) -> Issue | None:
         """Fetch a single issue by number. Returns None if not found."""
+        ...
+
+    def is_ready_to_fix(self, issue: Issue) -> bool:
+        """Return True if this issue is approved for fixing."""
+        ...
+
+    def is_claimed(self, issue: Issue) -> bool:
+        """Return True if an agent is already working on this issue."""
         ...
 
     def claim_issue(self, number: int) -> None:

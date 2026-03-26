@@ -4,6 +4,8 @@ from pathlib import Path
 
 from agent_loop.domain.context import AppContext
 from agent_loop.io.config import load_config
+from agent_loop.io.adapters.claude_cli import ClaudeCliBackend
+from agent_loop.io.adapters.github import GitHubTracker
 from agent_loop.features.analyze.command import cmd_analyze
 from agent_loop.features.fix.command import cmd_fix
 from agent_loop.features.watch.command import cmd_watch
@@ -52,7 +54,14 @@ def main() -> None:
 
     args = parser.parse_args()
     project_dir = args.project_dir.resolve()
-    ctx = AppContext(project_dir=project_dir, config=load_config(project_dir))
+    config = load_config(project_dir)
+
+    ctx = AppContext(
+        project_dir=project_dir,
+        config=config,
+        agent=ClaudeCliBackend(project_dir),
+        tracker=GitHubTracker(),
+    )
 
     if args.command == "analyze":
         cmd_analyze(ctx)

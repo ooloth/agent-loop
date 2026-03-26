@@ -1,10 +1,8 @@
-import json
 import time
 
 from agent_loop.domain.context import AppContext
-from agent_loop.domain.labels import Label
+from agent_loop.domain.issues import FoundIssue
 from agent_loop.io.logging import log
-from agent_loop.io.shell import claude, ensure_label, gh
 from agent_loop.features.analyze.parse import extract_json_from_response
 from agent_loop.features.analyze.prompts import ANALYZE_PROMPT
 
@@ -18,7 +16,7 @@ def cmd_analyze(ctx: AppContext) -> None:
         prompt = f"Project context:\n{ctx.config['context']}\n\n{prompt}"
 
     t0 = time.monotonic()
-    raw = claude(prompt, ctx.project_dir)
+    raw = ctx.agent.run(prompt)
 
     issues = extract_json_from_response(raw)
 
@@ -28,39 +26,24 @@ def cmd_analyze(ctx: AppContext) -> None:
     if not issues:
         return
 
-    # Ensure workflow labels exist
-    ensure_label(Label.AGENT_REPORTED)
-    ensure_label(Label.NEEDS_HUMAN_REVIEW)
-
-    # Fetch existing open issue titles to avoid duplicates
-    existing_json = gh(
-        "issue", "list", "--state", "open", "--json", "title", "--limit", "2000"
-    )
-    existing_titles = {i["title"] for i in json.loads(existing_json)}
+    existing_titles = ctx.tracker.list_open_titles()
 
     created = 0
     for issue in issues:
-        title = issue["title"]
-        if title in existing_titles:
-            log(f"├── ⏭️  Skipped (already exists): {title}")
+        found = FoundIssue(
+            title=issue["title"],
+            body=issue.get("body", ""),
+            labels=issue.get("labels", []),
+        )
+        if found.title in existing_titles:
+            log(f"├── ⏭️  Skipped (already exists): {found.title}")
             continue
 
-        body = issue.get("body", "")
-        extra_labels = issue.get("labels", [])
-
-        # Ensure extra labels exist
-        for label in extra_labels:
-            gh("label", "create", label, "--force", "--description", "")
-
-        all_labels = [Label.AGENT_REPORTED, Label.NEEDS_HUMAN_REVIEW] + extra_labels
-        label_args = [arg for label in all_labels for arg in ("--label", str(label))]
-        gh("issue", "create", "--title", title, "--body", body, *label_args)
+        ctx.tracker.create_issue(found)
         is_last = issue is issues[-1]
         connector = "└──" if is_last else "├──"
-        log(f"{connector} 📋 Created: {title}")
+        log(f"{connector} 📋 Created: {found.title}")
         created += 1
 
     skipped = len(issues) - created
-    log(
-        f"✅ {created} created, {skipped} skipped. Add '{Label.READY_TO_FIX}' when ready."
-    )
+    log(f"✅ {created} created, {skipped} skipped. Add 'ready-to-fix' when ready.")
