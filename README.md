@@ -24,6 +24,17 @@ Analyzer Agent → Human Triage → Fix + Review Loop → PR → Human Review �
 
 Human-authored issues skip `agent-reported` and `needs-human-review` — just add `ready-to-fix`.
 
+## Specs
+
+Domain specifications live in [`specs/`](specs/README.md) — timeless, tool-agnostic records of desired behavior, protocols, and architectural invariants.
+
+| Spec | Covers |
+|---|---|
+| [architecture.md](specs/architecture.md) | Layered architecture, file structure, feature pipelines, domain types |
+| [agent-backend.md](specs/agent-backend.md) | `AgentBackend` protocol — the AI execution port |
+| [vcs-backend.md](specs/vcs-backend.md) | `VCSBackend` protocol — the version-control port |
+| [issue-tracker.md](specs/issue-tracker.md) | `IssueTracker` protocol — the issue-platform port |
+
 ## Requirements
 
 - [uv](https://docs.astral.sh/uv/)
