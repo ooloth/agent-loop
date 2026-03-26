@@ -13,16 +13,17 @@ hooks = [
 # See: https://github.com/astral-sh/ty/issues/269#issuecomment-3669333114
 repo = "local"
 hooks = [
-  { id = "ty", name = "ty-check", entry = "uv run ty check", language = "python", types=["python"], pass_filenames = true },
+  { id = "ty-check", name = "ty check", entry = "uv run ty check", language = "python", types=["python"], pass_filenames = true },
 ]
 
 [[repos]]
-repo = "https://github.com/pre-commit/pre-commit-hooks"
-rev = "v6.0.0"
+repo = "builtin"
 hooks = [
+  { id = "detect-private-key" },
   { id = "check-json" },
+  { id = "check-json5" },
   { id = "check-toml" },
   { id = "check-yaml" },
-  { id = "pretty-format-json"},
-  { id = "end-of-file-fixer", args = ["--fix"] },
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
 ]
