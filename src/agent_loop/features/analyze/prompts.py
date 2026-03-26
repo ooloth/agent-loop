@@ -10,8 +10,10 @@ ANALYZE_PROMPT = textwrap.dedent("""\
         One or two sentences describing what is wrong.
 
         ## 📍 Location
-        - `file.py:42` — `function_name()`
+        - `path/to/file.py` — `ClassName.method_name()` or `function_name`
         - (list each relevant location as a bullet)
+        - Use symbol names (class, function, variable), NOT line numbers — line
+          numbers go stale as code changes and make issues brittle.
 
         ## 💥 Impact
         - What happens as a result
