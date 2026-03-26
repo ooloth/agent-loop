@@ -77,7 +77,9 @@ def fix_single_issue(ctx: AppContext, issue: Issue, max_iterations: int) -> None
             vcs=git,
             max_iterations=max_iterations,
             context=ctx.config.get("context", ""),
-            fix_prompt_template=ctx.config.get("fix_prompt_template", FIX_PROMPT_TEMPLATE),
+            fix_prompt_template=ctx.config.get(
+                "fix_prompt_template", FIX_PROMPT_TEMPLATE
+            ),
             review_prompt=ctx.config.get("review_prompt", REVIEW_PROMPT),
         )
         result = implement_and_review(task)

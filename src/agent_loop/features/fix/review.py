@@ -1,5 +1,8 @@
+from agent_loop.features.fix.engine import ReviewEntry
+
+
 def format_review_comment(
-    review_log: list[dict], converged: bool, max_iterations: int
+    review_log: list[ReviewEntry], converged: bool, max_iterations: int
 ) -> str:
     """Format the review trail as a readable GitHub comment."""
     total = len(review_log)
