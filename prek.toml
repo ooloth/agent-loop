@@ -1,0 +1,21 @@
+# See: https://prek.j178.dev/configuration/
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v6.0.0"
+hooks = [
+  { id = "check-json" },
+  { id = "check-toml" },
+  { id = "check-yaml" },
+  { id = "pretty-format-json"},
+  { id = "end-of-file-fixer", args = ["--fix"] },
+]
+
+[[repos]]
+# See: https://github.com/astral-sh/ruff-pre-commit?tab=readme-ov-file#using-ruff-with-prek
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.15.0"
+hooks = [
+  { id = "ruff-check", args = ["--fix"] },
+  { id = "ruff-format" },
+]
