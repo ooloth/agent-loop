@@ -1,5 +1,7 @@
 # Features
 
+Vertical slices that compose domain and io building blocks (the _when_ and _why_).
+
 The feature pipelines: `analyze`, `fix`, and `watch`.
 
 Each pipeline orchestrates domain ports and the implement/review engine to carry

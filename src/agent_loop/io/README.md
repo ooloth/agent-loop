@@ -1,6 +1,6 @@
 # I/O Layer
 
-Concrete adapters and infrastructure. All external I/O lives here.
+Shared infrastructure and adapters (the _how_). All external I/O lives here.
 
 Adapters implement the port protocols defined in `domain/` and are wired into `AppContext` at
 startup. Swapping a backend (e.g. Linear instead of GitHub) means adding a new adapter here without

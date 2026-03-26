@@ -1,6 +1,6 @@
 # Domain Layer
 
-Shared types and port protocols.
+Shared types and contracts (the _what_).
 
 Nothing in this package depends on any external system. It is the contract the rest of the codebase
 is built around. See `specs/architecture.md` for the architectural rationale.
