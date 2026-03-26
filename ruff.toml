@@ -1,0 +1,13 @@
+# See: https://docs.astral.sh/ruff/configuration/
+# See: https://docs.astral.sh/ruff/settings/
+
+line-length = 100
+target-version = "py314"
+
+[format]
+docstring-code-format = true
+
+[lint]
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
