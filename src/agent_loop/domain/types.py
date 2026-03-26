@@ -45,6 +45,12 @@ class Config(_ConfigRequired, total=False):
     review_prompt: str
 
 
+DEFAULT_CONFIG: Config = {
+    "max_iterations": 5,
+    "context": "",
+}
+
+
 @dataclass(frozen=True)
 class Issue:
     """A work item in the issue tracker."""
