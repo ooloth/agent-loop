@@ -11,6 +11,10 @@ FIX_PROMPT_TEMPLATE = textwrap.dedent("""\
     Prefer the simplest solution. If a problem can be avoided entirely (e.g. by
     choosing a different value, removing a constraint, or sidestepping the issue),
     that is better than adding error handling for a problem that doesn't need to exist.
+
+    If the description references specific line numbers, treat them as approximate hints
+    only — locate the relevant code by searching for the named symbol (class, function,
+    or variable) rather than navigating to a line number, which may have shifted.
 """)
 
 REVIEW_PROMPT = textwrap.dedent("""\
