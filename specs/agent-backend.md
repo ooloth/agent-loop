@@ -7,14 +7,9 @@ and pipelines are independent of which AI provider or invocation method is used.
 
 ## Protocol definition
 
-```python
-from typing import Protocol
-
-
-class AgentBackend(Protocol):
-    def run(self, prompt: str) -> str:
-        """Send a prompt and return the full response text."""
-        ...
+```
+AgentBackend:
+  run(prompt: string) -> string
 ```
 
 ---
@@ -35,16 +30,15 @@ class AgentBackend(Protocol):
 
 ## How it fits into ImplementAndReviewInput
 
-```python
-@dataclass(frozen=True)
-class ImplementAndReviewInput:
-    ...
-    implement_agent: AgentBackend   # edit tools — writes code
-    review_agent: AgentBackend      # read-only tools — inspects diff
-```
+Two named fields make the access-level distinction explicit in the type rather
+than a runtime detail:
 
-Using two named fields (rather than one) makes the access-level distinction
-explicit in the type rather than a runtime detail.
+```
+ImplementAndReviewInput:
+  ...
+  implement_agent: AgentBackend   -- edit access; writes code
+  review_agent:    AgentBackend   -- read-only access; inspects diff
+```
 
 ---
 
@@ -52,25 +46,12 @@ explicit in the type rather than a runtime detail.
 
 ### `ClaudeCliBackend` (current)
 
-Wraps the `claude` CLI subprocess. Lives in `io/adapters/claude_cli.py`.
-
-```python
-class ClaudeCliBackend:
-    def __init__(self, project_dir: Path, allowed_tools: str = EDIT_TOOLS) -> None: ...
-    def run(self, prompt: str) -> str: ...
-```
-
-Construction example:
-```python
-EDIT_TOOLS = "Read,Write,Edit,MultiEdit,Glob,Grep,Bash"
-READ_ONLY_TOOLS = "Read,Glob,Grep"
-
-implement_agent = ClaudeCliBackend(project_dir, allowed_tools=EDIT_TOOLS)
-review_agent = ClaudeCliBackend(project_dir, allowed_tools=READ_ONLY_TOOLS)
-```
+Runs the `claude` CLI as a subprocess. Takes a project directory and an access
+level (edit tools vs. read-only tools) at construction time. The access level
+is passed as an `--allowedTools` flag to the subprocess.
 
 ### Future adapters
 
-- `AnthropicSdkBackend` — calls the Anthropic Python SDK directly (no subprocess)
+- `AnthropicSdkBackend` — calls the Anthropic SDK directly (no subprocess)
 - `OpenAiBackend` — for cost/speed experiments with different models
 - `EchoBackend` — deterministic stub for testing; returns a preset response
