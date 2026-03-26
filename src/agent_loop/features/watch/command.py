@@ -3,7 +3,7 @@ import time
 
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.errors import AgentLoopError
-from agent_loop.io.logging import log
+from agent_loop.io.logging import log, log_blank
 from agent_loop.features.analyze.command import cmd_analyze
 from agent_loop.features.fix.command import cmd_fix
 
@@ -27,7 +27,7 @@ def cmd_watch(ctx: AppContext, interval: int, max_open_issues: int) -> None:
 
     log(f"👀 Watching {ctx.project_dir.name} (interval={interval}s, max_open={max_open_issues})")
     log("   Press Ctrl+C to stop gracefully.")
-    print()
+    log_blank()
 
     while not stopping:
         try:
@@ -41,7 +41,7 @@ def cmd_watch(ctx: AppContext, interval: int, max_open_issues: int) -> None:
 
         # Sleep in small increments so Ctrl+C is responsive
         log(f"😴 Sleeping {interval}s...")
-        print()
+        log_blank()
         for _ in range(interval):
             if stopping:
                 break

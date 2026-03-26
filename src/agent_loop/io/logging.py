@@ -7,6 +7,11 @@ def log(msg: str, prefix: str = "") -> None:
     print(f"[{timestamp}] {prefix}{msg}")
 
 
+def log_blank() -> None:
+    """Print a blank line to separate log sections."""
+    print()
+
+
 def log_step(msg: str, last: bool = False) -> None:
     """Log a step under the current issue."""
     connector = "└──" if last else "├──"
