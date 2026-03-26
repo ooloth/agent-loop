@@ -1,16 +1,26 @@
 import re
 import time
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import TypedDict
 
 from agent_loop.domain.protocols import AgentBackend, VCSBackend
-from agent_loop.io.logging import log_detail, log_step
 
 
 class ReviewEntry(TypedDict):
     iteration: int
     approved: bool
     feedback: str
+
+
+# Callback type for engine progress events. Receives a short human-readable
+# message at each step. The engine itself does no I/O — callers wire this to
+# logging, ignore it, or capture it for testing.
+ProgressCallback = Callable[[str], None]
+
+
+def _noop(_msg: str) -> None:
+    pass
 
 
 @dataclass(frozen=True)
@@ -24,6 +34,7 @@ class ImplementAndReviewInput:
     context: str
     fix_prompt_template: str
     review_prompt: str
+    on_progress: ProgressCallback = field(default=_noop)
 
 
 @dataclass(frozen=True)
@@ -77,13 +88,19 @@ def summarize_feedback(feedback: str, max_len: int = 80) -> str:
 
 
 def implement_and_review(task: ImplementAndReviewInput) -> ImplementAndReviewResult:
-    """Run the implement→review→address loop for an arbitrary task."""
+    """Run the implement→review→address loop for an arbitrary task.
+
+    Progress is reported via task.on_progress (a callback). The engine itself
+    does no I/O beyond the injected AgentBackend and VCSBackend calls.
+    """
+    notify = task.on_progress
+
     # Initial implementation
     fix_prompt = task.fix_prompt_template.format(title=task.title, body=task.body)
     if task.context:
         fix_prompt = f"Project context:\n{task.context}\n\n{fix_prompt}"
 
-    log_step("🤖 Implementing fix...")
+    notify("implementing")
     implement_response = task.implement_agent.run(fix_prompt)
     task.vcs.stage_all()
 
@@ -97,7 +114,7 @@ def implement_and_review(task: ImplementAndReviewInput) -> ImplementAndReviewRes
 
         diff = task.vcs.diff_staged()
         if not diff:
-            log_step("⚠️  No changes were made", last=True)
+            notify("no_changes")
             break
 
         review_prompt = (
@@ -122,18 +139,13 @@ def implement_and_review(task: ImplementAndReviewInput) -> ImplementAndReviewRes
         )
 
         if approved:
-            log_step(
-                f"🔎 Review {iteration}/{task.max_iterations} — ✅ Approved ({review_elapsed}s)"
-            )
+            notify(f"review_approved:{iteration}/{task.max_iterations}:{review_elapsed}s")
             converged = True
             break
 
+        summary = summarize_feedback(feedback)
         is_last_iteration = iteration >= task.max_iterations
-        log_step(
-            f"🔎 Review {iteration}/{task.max_iterations} — 🔄 Changes requested ({review_elapsed}s)",
-            last=is_last_iteration,
-        )
-        log_detail(summarize_feedback(feedback), last_step=is_last_iteration)
+        notify(f"review_rejected:{iteration}/{task.max_iterations}:{review_elapsed}s:{summary}")
 
         if is_last_iteration:
             break
@@ -145,7 +157,7 @@ def implement_and_review(task: ImplementAndReviewInput) -> ImplementAndReviewRes
             f"Please address the concerns. Prefer the simplest solution — if a problem\n"
             f"can be eliminated rather than handled, do that instead."
         )
-        log_step("🤖 Addressing feedback...")
+        notify("addressing_feedback")
         task.implement_agent.run(fix_feedback_prompt)
         task.vcs.stage_all()
 

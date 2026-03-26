@@ -2,11 +2,32 @@ import time
 
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.issues import Issue
-from agent_loop.io.logging import log, log_step
+from agent_loop.io.logging import log, log_detail, log_step
 from agent_loop.features.fix.branch_session import BranchSession
 from agent_loop.features.fix.engine import ImplementAndReviewInput, implement_and_review
 from agent_loop.features.fix.prompts import FIX_PROMPT_TEMPLATE, REVIEW_PROMPT
 from agent_loop.features.fix.review import format_review_comment
+
+
+def _log_engine_progress(event: str) -> None:
+    """Translate engine progress events into tree-structured log output."""
+    if event == "implementing":
+        log_step("🤖 Implementing fix...")
+    elif event == "no_changes":
+        log_step("⚠️  No changes were made", last=True)
+    elif event.startswith("review_approved:"):
+        # review_approved:1/5:12s
+        parts = event.split(":", 3)
+        log_step(f"🔎 Review {parts[1]} — ✅ Approved ({parts[2]})")
+    elif event.startswith("review_rejected:"):
+        # review_rejected:1/5:12s:summary text
+        parts = event.split(":", 4)
+        iteration, _max = parts[1].split("/")
+        is_last = iteration == _max
+        log_step(f"🔎 Review {parts[1]} — 🔄 Changes requested ({parts[2]})", last=is_last)
+        log_detail(parts[3], last_step=is_last)
+    elif event == "addressing_feedback":
+        log_step("🤖 Addressing feedback...")
 
 
 def cmd_fix(ctx: AppContext, issue_number: int | None = None) -> None:
@@ -57,6 +78,7 @@ def fix_single_issue(ctx: AppContext, issue: Issue, max_iterations: int) -> None
             context=ctx.config.get("context", ""),
             fix_prompt_template=ctx.config.get("fix_prompt_template", FIX_PROMPT_TEMPLATE),
             review_prompt=ctx.config.get("review_prompt", REVIEW_PROMPT),
+            on_progress=_log_engine_progress,
         )
         result = implement_and_review(task)
 
