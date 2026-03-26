@@ -14,6 +14,7 @@ hooks = [
 repo = "local"
 hooks = [
   { id = "ty-check", name = "ty check", entry = "uv run ty check", language = "python", types=["python"], pass_filenames = true },
+  { id = "lint-imports", name = "lint-imports", entry = "uv run lint-imports", language = "python", types=["python"], pass_filenames = false, always_run = true },
 ]
 
 [[repos]]

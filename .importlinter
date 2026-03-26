@@ -1,0 +1,53 @@
+[importlinter]
+root_packages =
+    agent_loop
+
+# --- Layered architecture ---
+# Lower layers must not import higher layers.
+# domain < io < features < cli (the entrypoint)
+
+[importlinter:contract:layers]
+name = Layered architecture
+type = layers
+layers =
+    agent_loop.cli
+    agent_loop.features
+    agent_loop.io
+    agent_loop.domain
+# domain/context.py uses TYPE_CHECKING to annotate the GitBackend type.
+# This is a type-only reference, not a runtime dependency.
+ignore_imports =
+    agent_loop.domain.context -> agent_loop.io.adapters.git
+
+# --- Features must not import adapters ---
+# Features receive backends via AppContext. They may use io.logging (a
+# cross-cutting concern) but must never import concrete adapters or
+# io.config — that's the CLI's job.
+
+[importlinter:contract:features-no-adapters]
+name = Features do not import adapters or io.config
+type = forbidden
+source_modules =
+    agent_loop.features
+forbidden_modules =
+    agent_loop.io.adapters
+    agent_loop.io.config
+    agent_loop.io.process
+# TYPE_CHECKING-only references to GitBackend for type annotations.
+# These are not runtime dependencies.
+ignore_imports =
+    agent_loop.features.fix.branch_session -> agent_loop.io.adapters.git
+    agent_loop.domain.context -> agent_loop.io.adapters.git
+
+# --- Engine purity ---
+# The engine is the domain core. It must only depend on domain.protocols
+# and stdlib — no io, no other features, no adapters.
+
+[importlinter:contract:engine-purity]
+name = Engine depends only on domain
+type = forbidden
+source_modules =
+    agent_loop.features.fix.engine
+forbidden_modules =
+    agent_loop.io
+    agent_loop.cli
