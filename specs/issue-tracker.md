@@ -13,7 +13,7 @@ concern.
 
 ```python
 from typing import Protocol
-from agent_loop._core.types import Issue, FoundIssue
+from agent_loop.domain.issues import Issue, FoundIssue
 
 
 class IssueTracker(Protocol):
@@ -34,8 +34,20 @@ class IssueTracker(Protocol):
         """Return issues approved for automated fixing, not already claimed."""
         ...
 
+    def list_awaiting_review(self) -> list[Issue]:
+        """Return issues waiting for human review (backpressure check for watch loop)."""
+        ...
+
     def get_issue(self, number: int) -> Issue | None:
         """Fetch a single issue by number. Returns None if not found."""
+        ...
+
+    def is_ready_to_fix(self, issue: Issue) -> bool:
+        """Return True if this issue is approved for fixing."""
+        ...
+
+    def is_claimed(self, issue: Issue) -> bool:
+        """Return True if an agent is already working on this issue."""
         ...
 
     def claim_issue(self, number: int) -> None:
@@ -73,8 +85,12 @@ class IssueTracker(Protocol):
 
 - `list_ready_issues()` excludes issues already claimed (in-progress). Callers
   do not need to filter.
+- `list_awaiting_review()` returns issues pending human triage. Used by the
+  watch loop for backpressure — analysis is skipped when this count meets the cap.
 - `get_issue()` returns `None` rather than raising for a missing issue, so
   the `--issue N` code path can emit a clean user-facing message.
+- `is_ready_to_fix()` / `is_claimed()` check label state on an already-fetched
+  `Issue`. Used as guards in the fix pipeline before entering `BranchSession`.
 - `claim_issue()` / `release_issue()` are the locking pair. `release_issue()`
   must always be called on failure (the fix pipeline's `finally` block handles
   this).
@@ -89,18 +105,33 @@ class IssueTracker(Protocol):
 
 ## Known adapters
 
-### `GitHubTracker` (current, to be extracted)
+### `GitHubTracker` (current)
 
-Wraps the `gh` CLI. All existing `gh "issue" ...` and `gh "pr" ...` calls in
-`analyze/command.py` and `fix/command.py` move here.
+Wraps the `gh` CLI via `io/process.py`'s `run()` helper. Lives in
+`io/adapters/github.py`.
 
 ```python
 class GitHubTracker:
-    def __init__(self, project_dir: Path) -> None: ...
+    # No constructor — relies on gh picking up repo context from the working directory
+    ...
 ```
 
-`open_pr()` returns the branch name (as used by the current `gh pr comment
-<branch>` call pattern). `comment_on_pr()` calls `gh pr comment <branch>`.
+`open_pr()` returns the branch name (used as `pr_ref` in subsequent
+`gh pr comment <branch>` calls). `comment_on_pr()` calls `gh pr comment <branch>`.
+
+#### Label lifecycle (GitHub-specific)
+
+`GitHubTracker` maps workflow state to GitHub labels via a private `_Label`
+StrEnum. Labels are created on demand (`_ensure_label`) before use.
+
+```
+Agent issue:  agent-reported + needs-human-review → ready-to-fix → agent-fix-in-progress → closed by PR
+Human issue:  ready-to-fix → agent-fix-in-progress → closed by PR
+```
+
+- `agent-reported`, `needs-human-review` — permanent origin/triage labels
+- `ready-to-fix` — transient; removed if agent makes no changes
+- `agent-fix-in-progress` — transient lock; removed on failure via `release_issue()`
 
 ### Future adapters
 
