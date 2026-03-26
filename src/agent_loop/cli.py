@@ -37,9 +37,7 @@ def main() -> None:
     sub.add_parser("analyze", help="Analyze codebase and create GitHub issues")
 
     fix_parser = sub.add_parser("fix", help="Fix ready-to-fix issues")
-    fix_parser.add_argument(
-        "--issue", "-i", type=int, help="Fix a specific issue number"
-    )
+    fix_parser.add_argument("--issue", "-i", type=int, help="Fix a specific issue number")
 
     watch_parser = sub.add_parser("watch", help="Poll continuously for work")
     watch_parser.add_argument(

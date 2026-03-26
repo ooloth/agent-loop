@@ -19,9 +19,7 @@ def cmd_watch(ctx: AppContext, interval: int, max_open_issues: int) -> None:
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
-    log(
-        f"👀 Watching {ctx.project_dir.name} (interval={interval}s, max_open={max_open_issues})"
-    )
+    log(f"👀 Watching {ctx.project_dir.name} (interval={interval}s, max_open={max_open_issues})")
     log("   Press Ctrl+C to stop gracefully.")
     print()
 

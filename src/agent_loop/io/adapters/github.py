@@ -81,20 +81,29 @@ class GitHubTracker:
 
     def list_ready_issues(self) -> list[Issue]:
         raw = _gh(
-            "issue", "list",
-            "--label", _Label.READY_TO_FIX,
-            "--search", f"-label:{_Label.AGENT_FIX_IN_PROGRESS}",
-            "--json", "number,title,body,labels",
-            "--limit", "100",
+            "issue",
+            "list",
+            "--label",
+            _Label.READY_TO_FIX,
+            "--search",
+            f"-label:{_Label.AGENT_FIX_IN_PROGRESS}",
+            "--json",
+            "number,title,body,labels",
+            "--limit",
+            "100",
         )
         return [_parse_issue(i) for i in json.loads(raw)]
 
     def list_awaiting_review(self) -> list[Issue]:
         raw = _gh(
-            "issue", "list",
-            "--label", _Label.NEEDS_HUMAN_REVIEW,
-            "--json", "number,title,body,labels",
-            "--limit", "100",
+            "issue",
+            "list",
+            "--label",
+            _Label.NEEDS_HUMAN_REVIEW,
+            "--json",
+            "number,title,body,labels",
+            "--limit",
+            "100",
         )
         return [_parse_issue(i) for i in json.loads(raw)]
 
@@ -122,9 +131,7 @@ class GitHubTracker:
         _gh("issue", "comment", str(number), "--body", body)
 
     def get_default_branch(self) -> str:
-        return _gh(
-            "repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name"
-        )
+        return _gh("repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name")
 
     def open_pr(self, title: str, body: str, head: str) -> str:
         """Open a pull request and return the branch name as a usable pr_ref."""
