@@ -2,7 +2,7 @@
 name = "agent-loop"
 version = "0.1.0"
 description = "Analyze a codebase for issues, fix them with AI review, open PRs."
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = ["PyYAML"]
 
 [project.scripts]

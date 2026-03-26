@@ -41,7 +41,7 @@ cd agent-loop
 uv sync
 
 # Install as a CLI tool (editable — source changes take effect immediately)
-uv tool install -e .
+uv tool install -e --reinstall .
 
 # Verify
 agent-loop --help
