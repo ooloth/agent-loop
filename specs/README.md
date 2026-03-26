@@ -26,6 +26,41 @@ A useful test: could you regenerate a working implementation from these specs al
 - Operational concerns (deployment, configuration format)
 - Anything that only makes sense in the current concrete implementation
 
+## Format and style
+
+Specs use **language-agnostic pseudocode** for all type and interface definitions.
+The goal: a spec should be equally readable to someone implementing in Rust, Go,
+or TypeScript. If it could only be read by a Python developer, it has too much
+implementation detail.
+
+**Use pseudocode like this:**
+
+```
+MyProtocol:
+  method_name(param: type) -> return_type
+  other_method(a: string, b: integer) -> list<Thing>
+
+MyType:
+  field_name:   type       -- inline comment explaining semantics
+  optional?:    string     -- ? suffix means optional/nullable
+```
+
+**Do include:**
+- Method names, parameter names, and abstract types (`string`, `integer`,
+  `bool`, `list<T>`, `set<T>`, `T | null`)
+- Field names and their purpose
+- Behavioral invariants and edge cases
+- Design rationale — especially for non-obvious decisions
+
+**Do not include:**
+- Language-specific syntax (`@dataclass`, `TypedDict`, `impl`, `struct`, etc.)
+- File paths or module locations
+- Constructor signatures or default parameter values
+- Implementation details (subprocess flags, CLI arguments, library calls)
+- Anything that would need updating when refactoring without changing behavior
+
+---
+
 ## How to maintain specs
 
 Specs are allowed to be **optimistically ahead of implementation** — writing a spec before or during implementation is the intended workflow. That lag is expected and normal.
