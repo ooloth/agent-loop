@@ -31,6 +31,9 @@ class ImplementAndReviewResult:
     review_log: list[ReviewEntry]
     converged: bool
     has_changes: bool
+    # The implement agent's response to the initial fix prompt — useful when no
+    # changes were made, since the review_log will be empty in that case.
+    implement_response: str
 
 
 def parse_review_verdict(feedback: str) -> bool:
@@ -81,7 +84,7 @@ def implement_and_review(task: ImplementAndReviewInput) -> ImplementAndReviewRes
         fix_prompt = f"Project context:\n{task.context}\n\n{fix_prompt}"
 
     log_step("🤖 Implementing fix...")
-    task.implement_agent.run(fix_prompt)
+    implement_response = task.implement_agent.run(fix_prompt)
     task.vcs.stage_all()
 
     # Review loop
@@ -151,4 +154,5 @@ def implement_and_review(task: ImplementAndReviewInput) -> ImplementAndReviewRes
         review_log=review_log,
         converged=converged,
         has_changes=has_changes,
+        implement_response=implement_response,
     )
