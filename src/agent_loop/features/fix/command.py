@@ -105,7 +105,9 @@ def fix_single_issue(ctx: AppContext, issue: Issue, max_iterations: int) -> None
         )
 
         # Post review trail as a PR comment
-        review_comment = format_review_comment(result.review_log, result.converged, max_iterations)
+        review_comment = format_review_comment(
+            result.review_log, converged=result.converged, max_iterations=max_iterations
+        )
         ctx.tracker.comment_on_pr(pr_ref, review_comment)
 
         total_elapsed = int(time.monotonic() - fix_start)
