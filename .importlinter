@@ -3,7 +3,7 @@
 root_packages =
     agent_loop
 
-# --- Layered architecture ---
+# --- Cross-layer architecture ---
 # Lower layers must not import higher layers.
 # domain < io < features < cli (the entrypoint)
 
@@ -16,20 +16,20 @@ layers =
     agent_loop.io
     agent_loop.domain
 
-# --- Features must not import adapters ---
-# Features receive backends via AppContext. They may use io.logging (a
-# cross-cutting concern) but must never import concrete adapters or
-# io.config — that's the CLI's job.
+# --- Features may only use io.observability ---
+# Features receive backends via AppContext. They may use observability
+# (a cross-cutting concern) but must never import adapters, bootstrap,
+# transports, or any other io subpackage.
 
-[importlinter:contract:features-no-adapters]
-name = Features do not import adapters or io.config
+[importlinter:contract:features-io-boundary]
+name = Features may no import io/ modules other than those in io.observability
 type = forbidden
 source_modules =
     agent_loop.features
 forbidden_modules =
-    agent_loop.io.adapters
-    agent_loop.io.config
-    agent_loop.io.process
+    agent_loop.io
+ignore_imports =
+    agent_loop.features.** -> agent_loop.io.observability.**
 
 # --- Engine purity ---
 # The engine is the domain core. It must only depend on domain.protocols
@@ -43,3 +43,30 @@ source_modules =
 forbidden_modules =
     agent_loop.io
     agent_loop.cli
+    agent_loop.features.analyze
+    agent_loop.features.watch
+
+# --- io/ internal layering ---
+# bootstrap -> adapters -> transports (lower must not import higher).
+
+[importlinter:contract:io-internal-layers]
+name = io/ internal layering (bootstrap -> adapters -> transports)
+type = layers
+layers =
+    agent_loop.io.bootstrap
+    agent_loop.io.adapters
+    agent_loop.io.transports
+
+# --- Observability independence ---
+# Observability may be imported by any io subpackage but depends on
+# none of them.
+
+[importlinter:contract:observability-independence]
+name = Observability does not depend on other io/ subpackages
+type = forbidden
+source_modules =
+    agent_loop.io.observability
+forbidden_modules =
+    agent_loop.io.adapters
+    agent_loop.io.bootstrap
+    agent_loop.io.transports
