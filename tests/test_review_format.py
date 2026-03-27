@@ -1,11 +1,12 @@
 """Tests for the review comment formatter."""
 
+from agent_loop.features.fix.engine import ReviewEntry
 from agent_loop.features.fix.review import format_review_comment
 
 
 class TestFormatReviewComment:
     def test_single_approval(self):
-        log = [{"iteration": 1, "approved": True, "feedback": "Looks great."}]
+        log: list[ReviewEntry] = [{"iteration": 1, "approved": True, "feedback": "Looks great."}]
         result = format_review_comment(log, converged=True, max_iterations=5)
 
         assert "✅ Passed after 1 iteration" in result
@@ -17,7 +18,7 @@ class TestFormatReviewComment:
         assert "<details>" not in result
 
     def test_two_iterations_converged(self):
-        log = [
+        log: list[ReviewEntry] = [
             {"iteration": 1, "approved": False, "feedback": "Fix the bug."},
             {"iteration": 2, "approved": True, "feedback": "LGTM now."},
         ]
@@ -34,7 +35,7 @@ class TestFormatReviewComment:
         assert "LGTM now." in result
 
     def test_did_not_converge(self):
-        log = [
+        log: list[ReviewEntry] = [
             {"iteration": 1, "approved": False, "feedback": "Nope."},
             {"iteration": 2, "approved": False, "feedback": "Still no."},
         ]

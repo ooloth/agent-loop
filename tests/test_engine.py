@@ -29,6 +29,24 @@ class StubVCS:
     def diff_staged(self) -> str:
         return next(self._diffs)
 
+    def checkout(self, branch: str) -> None:
+        pass
+
+    def pull(self, branch: str) -> None:
+        pass
+
+    def checkout_new_branch(self, branch: str) -> None:
+        pass
+
+    def commit(self, message: str) -> None:
+        pass
+
+    def push(self, branch: str) -> None:
+        pass
+
+    def delete_branch(self, branch: str) -> None:
+        pass
+
 
 def _make_task(
     implement_responses: list[str],
@@ -36,7 +54,7 @@ def _make_task(
     diffs: list[str],
     max_iterations: int = 5,
     context: str = "",
-) -> ImplementAndReviewInput:
+) -> tuple[ImplementAndReviewInput, list[str]]:
     events: list[str] = []
     task = ImplementAndReviewInput(
         title="Test issue",
@@ -128,9 +146,9 @@ class TestImplementAndReview:
         )
         implement_and_review(task)
 
-        impl_agent = task.implement_agent
-        assert "Project context:" in impl_agent.prompts[0]
-        assert "This is a Python project." in impl_agent.prompts[0]
+        assert isinstance(task.implement_agent, StubAgent)
+        assert "Project context:" in task.implement_agent.prompts[0]
+        assert "This is a Python project." in task.implement_agent.prompts[0]
 
-        review_agent = task.review_agent
-        assert "Project context:" in review_agent.prompts[0]
+        assert isinstance(task.review_agent, StubAgent)
+        assert "Project context:" in task.review_agent.prompts[0]
