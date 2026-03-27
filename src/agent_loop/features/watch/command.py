@@ -3,7 +3,7 @@ import time
 
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.errors import AgentLoopError
-from agent_loop.io.logging import log, log_blank
+from agent_loop.io.observability.logging import log, log_blank
 from agent_loop.features.analyze.command import cmd_analyze
 from agent_loop.features.fix.command import cmd_fix
 

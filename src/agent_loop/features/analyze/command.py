@@ -5,7 +5,7 @@ import time
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.errors import AnalysisParseError
 from agent_loop.domain.issues import FoundIssue
-from agent_loop.io.logging import log
+from agent_loop.io.observability.logging import log
 from agent_loop.features.analyze.prompts import ANALYZE_PROMPT
 
 

@@ -2,7 +2,7 @@ import json
 from enum import StrEnum
 
 from agent_loop.domain.issues import FoundIssue, Issue
-from agent_loop.io.process import run
+from agent_loop.io.transports.process import run
 
 
 # --- GitHub workflow labels (private implementation detail) ---

@@ -1,4 +1,4 @@
-from agent_loop.io.process import run
+from agent_loop.io.transports.process import run
 
 
 def _git(*args: str) -> str:

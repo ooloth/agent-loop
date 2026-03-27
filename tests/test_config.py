@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from agent_loop.domain.config import Config
-from agent_loop.io.config import load_config
+from agent_loop.io.bootstrap.config import load_config
 
 
 class TestLoadConfig:

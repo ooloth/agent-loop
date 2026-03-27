@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from agent_loop.domain.errors import AgentError, SubprocessError
-from agent_loop.io.process import run
+from agent_loop.io.transports.process import run
 
 # Read-only tools for analysis and review (no filesystem writes or shell execution)
 READ_ONLY_TOOLS = "Read,Glob,Grep"
