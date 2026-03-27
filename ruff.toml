@@ -10,7 +10,7 @@ docstring-code-format = true
 [lint]
 fixable = ["ALL"] # allow fix for all enabled rules (when `--fix`) is provided.
 unfixable = []
-extend-select = ["B", "C4", "DTZ", "FBT", "I", "PERF", "PIE", "PT", "RET", "SIM", "TID251", "UP"]
+extend-select = ["ANN", "B", "C4", "DTZ", "FBT", "I", "PERF", "PIE", "PT", "RET", "SIM", "TID251", "UP"]
 
 [lint.isort]
 known-first-party = ["agent_loop"]
