@@ -1,0 +1,5 @@
+# See: https://docs.pytest.org/en/stable/reference/reference.html#ini-options-ref
+
+[pytest]
+minversion = "9.0"
+addopts = ["-ra", "-q"]
