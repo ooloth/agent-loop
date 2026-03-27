@@ -28,12 +28,12 @@ Human-authored issues skip `agent-reported` and `needs-human-review` — just ad
 
 Domain specifications live in [`specs/`](specs/README.md) — timeless, tool-agnostic records of desired behavior, protocols, and architectural invariants.
 
-| Spec | Covers |
-|---|---|
-| [architecture.md](specs/architecture.md) | Layered architecture, file structure, feature pipelines, domain types |
-| [agent-backend.md](specs/agent-backend.md) | `AgentBackend` protocol — the AI execution port |
-| [vcs-backend.md](specs/vcs-backend.md) | `VCSBackend` protocol — the version-control port |
-| [issue-tracker.md](specs/issue-tracker.md) | `IssueTracker` protocol — the issue-platform port |
+| Spec                                       | Covers                                                                |
+| ------------------------------------------ | --------------------------------------------------------------------- |
+| [architecture.md](specs/architecture.md)   | Layered architecture, file structure, feature pipelines, domain types |
+| [agent-backend.md](specs/agent-backend.md) | `AgentBackend` protocol — the AI execution port                       |
+| [vcs-backend.md](specs/vcs-backend.md)     | `VCSBackend` protocol — the version-control port                      |
+| [issue-tracker.md](specs/issue-tracker.md) | `IssueTracker` protocol — the issue-platform port                     |
 
 ## Requirements
 
@@ -105,3 +105,13 @@ context: |
 ```
 
 All fields are optional — sensible defaults are built in.
+
+## Inspiration
+
+- [Case Statement: Building a Harness](https://nicknisi.com/posts/case-statement/) + [workos/case](https://github.com/workos/case) by Nick Nisi
+- [Harness engineering: leveraging Codex in an agent-first world](https://openai.com/index/harness-engineering/) by Ryan Lopopolo
+- [Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) by Justin Young
+- [Harness design for long-running application development](https://www.anthropic.com/engineering/harness-design-long-running-apps) by Prithvi Rajasekaran
+- [Harness Engineering](https://martinfowler.com/articles/exploring-gen-ai/harness-engineering.html) by Birgitta Böckler
+- [Relocating Rigor](https://aicoding.leaflet.pub/3mbrvhyye4k2e) by Chad Fowler
+- [Skill Issue: Harness Engineering for Coding Agents](https://www.humanlayer.dev/blog/skill-issue-harness-engineering-for-coding-agents) by Kyle Mistele
