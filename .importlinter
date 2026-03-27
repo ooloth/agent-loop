@@ -1,3 +1,4 @@
+# vim: ft=ini
 [importlinter]
 root_packages =
     agent_loop
