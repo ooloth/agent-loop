@@ -32,8 +32,8 @@ ignore_imports =
     agent_loop.features.** -> agent_loop.io.observability.**
 
 # --- Engine purity ---
-# The engine is the domain core. It must only depend on domain.protocols
-# and stdlib — no io, no other features, no adapters.
+# The engine is the domain core. It must only depend on domain ports
+# and models — no io, no other features, no adapters.
 
 [importlinter:contract:engine-purity]
 name = Engine depends only on domain
@@ -70,3 +70,50 @@ forbidden_modules =
     agent_loop.io.adapters
     agent_loop.io.bootstrap
     agent_loop.io.transports
+
+# --- domain/ internal rules ---
+# models and errors are leaves; ports depend on models only;
+# nothing in domain imports context.
+
+[importlinter:contract:models-are-leaves]
+name = Models are domain leaves
+type = forbidden
+source_modules =
+    agent_loop.domain.models
+forbidden_modules =
+    agent_loop.domain.ports
+    agent_loop.domain.config
+    agent_loop.domain.context
+    agent_loop.domain.errors
+
+[importlinter:contract:errors-are-leaves]
+name = Errors are domain leaves
+type = forbidden
+source_modules =
+    agent_loop.domain.errors
+forbidden_modules =
+    agent_loop.domain.ports
+    agent_loop.domain.models
+    agent_loop.domain.config
+    agent_loop.domain.context
+
+[importlinter:contract:ports-depend-on-models-only]
+name = Ports depend only on models
+type = forbidden
+source_modules =
+    agent_loop.domain.ports
+forbidden_modules =
+    agent_loop.domain.config
+    agent_loop.domain.context
+    agent_loop.domain.errors
+
+[importlinter:contract:context-is-terminal]
+name = Nothing in domain imports context
+type = forbidden
+source_modules =
+    agent_loop.domain.models
+    agent_loop.domain.ports
+    agent_loop.domain.config
+    agent_loop.domain.errors
+forbidden_modules =
+    agent_loop.domain.context
