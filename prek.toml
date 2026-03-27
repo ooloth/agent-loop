@@ -11,9 +11,13 @@ hooks = [
 
 [[repos]]
 # See: https://github.com/astral-sh/ty/issues/269#issuecomment-3669333114
+#
+# ty and lint-imports are whole-program checkers — a change in src/ can cause
+# a type error in tests/ or an import violation across packages. They must
+# always run against the full codebase, not just the staged files.
 repo = "local"
 hooks = [
-  { id = "ty-check", name = "ty check", entry = "uv run ty check", language = "python", types=["python"], pass_filenames = true },
+  { id = "ty-check", name = "ty check", entry = "uv run ty check", language = "python", types=["python"], pass_filenames = false, always_run = true },
   { id = "lint-imports", name = "lint-imports", entry = "uv run lint-imports", language = "python", types=["python"], pass_filenames = false, always_run = true },
 ]
 
