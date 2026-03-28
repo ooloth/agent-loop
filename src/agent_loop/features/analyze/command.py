@@ -1,29 +1,10 @@
-import json
-import re
 import time
 
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.models.issues import FoundIssue
-from agent_loop.features.analyze.errors import AnalysisParseError
+from agent_loop.features.analyze.parse import parse_analysis_results
 from agent_loop.features.analyze.prompts import ANALYZE_PROMPT
 from agent_loop.io.observability.logging import log
-
-
-def parse_analysis_results(raw: str) -> list[dict]:
-    """Parse the JSON issue list from an agent response.
-
-    Agents sometimes wrap JSON in a fenced code block; this handles both
-    the bare-JSON and fenced-block cases.
-
-    Raises AnalysisParseError if the response isn't valid JSON.
-    """
-    match = re.search(r"```(?:\w+)?\n(.*?)```", raw, re.DOTALL)
-    json_str = match.group(1) if match else raw
-
-    try:
-        return json.loads(json_str)
-    except json.JSONDecodeError:
-        raise AnalysisParseError(raw) from None
 
 
 def cmd_analyze(ctx: AppContext) -> None:
