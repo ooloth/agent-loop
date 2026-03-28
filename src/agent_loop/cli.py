@@ -61,7 +61,7 @@ def main() -> None:
         project_dir=project_dir,
         config=config,
         tracker=GitHubTracker(),
-        vcs=GitBackend(),
+        vcs=GitBackend(project_dir),
         read_agent=ClaudeCliBackend(project_dir, allowed_tools=READ_ONLY_TOOLS),
         edit_agent=ClaudeCliBackend(project_dir, allowed_tools=EDIT_TOOLS),
     )
