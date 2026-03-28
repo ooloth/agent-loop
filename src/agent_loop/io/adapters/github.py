@@ -1,6 +1,7 @@
 import json
 from enum import StrEnum
 
+from agent_loop.domain.errors import SubprocessError
 from agent_loop.domain.models.issues import FoundIssue, Issue
 from agent_loop.io.transports.process import run
 
@@ -107,7 +108,10 @@ class GitHubTracker:
         return [_parse_issue(i) for i in json.loads(raw)]
 
     def get_issue(self, number: int) -> Issue | None:
-        raw = _gh("issue", "view", str(number), "--json", "number,title,body,labels")
+        try:
+            raw = _gh("issue", "view", str(number), "--json", "number,title,body,labels")
+        except SubprocessError:
+            return None
         return _parse_issue(json.loads(raw))
 
     def is_ready_to_fix(self, issue: Issue) -> bool:
