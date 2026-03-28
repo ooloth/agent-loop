@@ -3,31 +3,36 @@ import time
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.models.issues import Issue
 from agent_loop.features.fix.branch_session import BranchSession
-from agent_loop.features.fix.engine import ImplementAndReviewInput, implement_and_review
+from agent_loop.features.fix.engine import (
+    AddressingFeedback,
+    EngineEvent,
+    ImplementAndReviewInput,
+    Implementing,
+    NoChanges,
+    ReviewApproved,
+    ReviewRejected,
+    implement_and_review,
+)
 from agent_loop.features.fix.prompts import FIX_PROMPT_TEMPLATE, REVIEW_PROMPT
 from agent_loop.features.fix.review import format_review_comment
 from agent_loop.io.observability.logging import log, log_detail, log_step
 
 
-def _log_engine_progress(event: str) -> None:
+def _log_engine_progress(event: EngineEvent) -> None:
     """Translate engine progress events into tree-structured log output."""
-    if event == "implementing":
-        log_step("🤖 Implementing fix...")
-    elif event == "no_changes":
-        log_step("⚠️  No changes were made", last=True)
-    elif event.startswith("review_approved:"):
-        # review_approved:1/5:12s
-        parts = event.split(":", 3)
-        log_step(f"🔎 Review {parts[1]} — ✅ Approved ({parts[2]})")
-    elif event.startswith("review_rejected:"):
-        # review_rejected:1/5:12s:summary text
-        parts = event.split(":", 4)
-        iteration, _max = parts[1].split("/")
-        is_last = iteration == _max
-        log_step(f"🔎 Review {parts[1]} — 🔄 Changes requested ({parts[2]})", last=is_last)
-        log_detail(parts[3], last_step=is_last)
-    elif event == "addressing_feedback":
-        log_step("🤖 Addressing feedback...")
+    match event:
+        case Implementing():
+            log_step("🤖 Implementing fix...")
+        case NoChanges():
+            log_step("⚠️  No changes were made", last=True)
+        case ReviewApproved(iteration=i, max_iterations=m, elapsed_seconds=s):
+            log_step(f"🔎 Review {i}/{m} — ✅ Approved ({s}s)")
+        case ReviewRejected(iteration=i, max_iterations=m, elapsed_seconds=s, summary=summary):
+            is_last = i >= m
+            log_step(f"🔎 Review {i}/{m} — 🔄 Changes requested ({s}s)", last=is_last)
+            log_detail(summary, last_step=is_last)
+        case AddressingFeedback():
+            log_step("🤖 Addressing feedback...")
 
 
 def cmd_fix(ctx: AppContext, issue_number: int | None = None) -> None:

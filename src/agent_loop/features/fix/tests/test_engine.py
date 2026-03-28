@@ -2,7 +2,15 @@
 
 from collections.abc import Iterator
 
-from agent_loop.features.fix.engine import ImplementAndReviewInput, implement_and_review
+from agent_loop.features.fix.engine import (
+    AddressingFeedback,
+    EngineEvent,
+    ImplementAndReviewInput,
+    Implementing,
+    NoChanges,
+    ReviewApproved,
+    implement_and_review,
+)
 
 
 class StubAgent:
@@ -54,8 +62,8 @@ def _make_task(
     diffs: list[str],
     max_iterations: int = 5,
     context: str = "",
-) -> tuple[ImplementAndReviewInput, list[str]]:
-    events: list[str] = []
+) -> tuple[ImplementAndReviewInput, list[EngineEvent]]:
+    events: list[EngineEvent] = []
     task = ImplementAndReviewInput(
         title="Test issue",
         body="Fix the thing.",
@@ -86,8 +94,8 @@ class TestImplementAndReview:
         assert result.implement_response == "fixed it"
         assert len(result.review_log) == 1
         assert result.review_log[0]["approved"] is True
-        assert "implementing" in events
-        assert any("review_approved" in e for e in events)
+        assert Implementing() in events
+        assert any(isinstance(e, ReviewApproved) for e in events)
 
     def test_no_changes_after_implementation(self) -> None:
         task, events = _make_task(
@@ -101,7 +109,7 @@ class TestImplementAndReview:
         assert result.converged is False
         assert result.has_changes is False
         assert result.review_log == []
-        assert "no_changes" in events
+        assert NoChanges() in events
 
     def test_feedback_addressed_then_approved(self) -> None:
         task, events = _make_task(
@@ -119,7 +127,7 @@ class TestImplementAndReview:
         assert len(result.review_log) == 2
         assert result.review_log[0]["approved"] is False
         assert result.review_log[1]["approved"] is True
-        assert "addressing_feedback" in events
+        assert AddressingFeedback() in events
 
     def test_max_iterations_exhausted(self) -> None:
         task, events = _make_task(
