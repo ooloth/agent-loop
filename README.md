@@ -115,3 +115,4 @@ All fields are optional — sensible defaults are built in.
 - [Harness Engineering](https://martinfowler.com/articles/exploring-gen-ai/harness-engineering.html) by Birgitta Böckler
 - [Relocating Rigor](https://aicoding.leaflet.pub/3mbrvhyye4k2e) by Chad Fowler
 - [Skill Issue: Harness Engineering for Coding Agents](https://www.humanlayer.dev/blog/skill-issue-harness-engineering-for-coding-agents) by Kyle Mistele
+- [Engineer the Harness](https://mitchellh.com/writing/my-ai-adoption-journey#step-5-engineer-the-harness) by Mitchell Hashimoto
