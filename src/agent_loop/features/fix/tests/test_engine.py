@@ -72,7 +72,7 @@ def _make_task(
 
 
 class TestImplementAndReview:
-    def test_approved_first_try(self):
+    def test_approved_first_try(self) -> None:
         task, events = _make_task(
             implement_responses=["fixed it"],
             review_responses=["**Verdict**: LGTM"],
@@ -89,7 +89,7 @@ class TestImplementAndReview:
         assert "implementing" in events
         assert any("review_approved" in e for e in events)
 
-    def test_no_changes_after_implementation(self):
+    def test_no_changes_after_implementation(self) -> None:
         task, events = _make_task(
             implement_responses=["nothing to do"],
             review_responses=[],
@@ -103,7 +103,7 @@ class TestImplementAndReview:
         assert result.review_log == []
         assert "no_changes" in events
 
-    def test_feedback_addressed_then_approved(self):
+    def test_feedback_addressed_then_approved(self) -> None:
         task, events = _make_task(
             implement_responses=["first attempt", "addressed feedback"],
             review_responses=[
@@ -121,7 +121,7 @@ class TestImplementAndReview:
         assert result.review_log[1]["approved"] is True
         assert "addressing_feedback" in events
 
-    def test_max_iterations_exhausted(self):
+    def test_max_iterations_exhausted(self) -> None:
         task, events = _make_task(
             implement_responses=["attempt1", "attempt2"],
             review_responses=[
@@ -137,7 +137,7 @@ class TestImplementAndReview:
         assert result.has_changes is True
         assert len(result.review_log) == 2
 
-    def test_context_prepended_to_prompts(self):
+    def test_context_prepended_to_prompts(self) -> None:
         task, events = _make_task(
             implement_responses=["done"],
             review_responses=["**Verdict**: LGTM"],

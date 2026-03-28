@@ -5,7 +5,7 @@ from agent_loop.features.fix.review import format_review_comment
 
 
 class TestFormatReviewComment:
-    def test_single_approval(self):
+    def test_single_approval(self) -> None:
         log: list[ReviewEntry] = [{"iteration": 1, "approved": True, "feedback": "Looks great."}]
         result = format_review_comment(log, converged=True, max_iterations=5)
 
@@ -17,7 +17,7 @@ class TestFormatReviewComment:
         # Single iteration should not be in a <details> block
         assert "<details>" not in result
 
-    def test_two_iterations_converged(self):
+    def test_two_iterations_converged(self) -> None:
         log: list[ReviewEntry] = [
             {"iteration": 1, "approved": False, "feedback": "Fix the bug."},
             {"iteration": 2, "approved": True, "feedback": "LGTM now."},
@@ -34,7 +34,7 @@ class TestFormatReviewComment:
         assert "### ✅ Iteration 2" in result
         assert "LGTM now." in result
 
-    def test_did_not_converge(self):
+    def test_did_not_converge(self) -> None:
         log: list[ReviewEntry] = [
             {"iteration": 1, "approved": False, "feedback": "Nope."},
             {"iteration": 2, "approved": False, "feedback": "Still no."},
@@ -45,6 +45,6 @@ class TestFormatReviewComment:
         assert "**0** approved" in result
         assert "**2** requested changes" in result
 
-    def test_empty_log(self):
+    def test_empty_log(self) -> None:
         result = format_review_comment([], converged=False, max_iterations=5)
         assert "**0** iterations" in result
