@@ -53,12 +53,7 @@ def cmd_watch(ctx: AppContext, interval: int, max_open_issues: int) -> None:
 def _poll_once(ctx: AppContext, max_open_issues: int) -> None:
     """Run one fix + analyze cycle. Exceptions propagate to the caller."""
     # Step 1: Fix any ready-to-fix issues
-    ready_issues = ctx.tracker.list_ready_issues()
-
-    if ready_issues:
-        cmd_fix(ctx)
-    else:
-        log("💤 No issues ready to fix")
+    cmd_fix(ctx)
 
     # Step 2: Analyze if queue is below cap
     open_count = len(ctx.tracker.list_awaiting_review())
