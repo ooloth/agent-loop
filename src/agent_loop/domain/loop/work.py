@@ -23,6 +23,6 @@ def from_prompt(prompt: str) -> WorkSpec:
 
     Title is a truncation for log display; body is the full prompt.
     """
-    max_title = 60
+    max_title = 50
     title = prompt[:max_title].rstrip() + "…" if len(prompt) > max_title else prompt
     return WorkSpec(title=title, body=prompt)

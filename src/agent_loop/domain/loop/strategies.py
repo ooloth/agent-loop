@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import textwrap
 import time
 from typing import TypedDict
 
@@ -183,6 +184,33 @@ class AntagonisticStrategy:
         )
 
 
+_SCRATCHPAD_INSTRUCTIONS = textwrap.dedent("""\
+
+    After making your change, end your response with a scratchpad for the
+    next iteration using this exact format:
+
+    ```scratchpad
+    ## Status
+    <what's done and what's in progress>
+
+    ## Key decisions
+    <choices made and why — help the next iteration understand your reasoning>
+
+    ## Remaining work
+    <what still needs to be done, if anything>
+    ```""")
+
+
+def extract_scratchpad(response: str) -> str:
+    """Extract the scratchpad block from an agent response.
+
+    Returns the content between ```scratchpad and ```, or empty string
+    if no scratchpad block is found (graceful degradation).
+    """
+    match = re.search(r"```scratchpad\n(.*?)```", response, re.DOTALL)
+    return match.group(1).strip() if match else ""
+
+
 class RalphStrategy:
     """Fresh-eyes iterative refinement with a single agent.
 
@@ -191,8 +219,16 @@ class RalphStrategy:
     improvement — either new progress or correcting a prior step. Commits
     after each iteration for crash safety and audit trail.
 
+    A scratchpad is passed between iterations: the agent outputs a
+    ```scratchpad block in its response, which the strategy extracts and
+    injects into the next iteration's prompt. This gives fresh eyes the
+    context they need (why decisions were made, what's left) without the
+    conformity pressure of a growing log — each agent writes its own
+    assessment.
+
     After execution, strategy-specific state is available via attributes:
     - responses: list[str] — each iteration's agent response
+    - scratchpad: str — the final scratchpad content
     """
 
     def __init__(
@@ -204,6 +240,7 @@ class RalphStrategy:
         self._prompt_template = prompt_template
         self._output_signal = OutputSignal()
         self.responses: list[str] = []
+        self.scratchpad: str = ""
 
     def execute(
         self,
@@ -222,12 +259,20 @@ class RalphStrategy:
             prompt = self._prompt_template.format(goal=work.body)
             if context:
                 prompt = f"Project context:\n{context}\n\n{prompt}"
+            if self.scratchpad:
+                prompt += (
+                    "\n\nScratchpad from the previous iteration"
+                    " (use for context, but form your own assessment):\n\n"
+                    f"{self.scratchpad}"
+                )
+            prompt += _SCRATCHPAD_INSTRUCTIONS
 
             notify(StepStarted(iteration=iteration, max_iterations=max_iterations))
             t0 = time.monotonic()
             response = self._agent.run(prompt)
             elapsed = int(time.monotonic() - t0)
             self.responses.append(response)
+            self.scratchpad = extract_scratchpad(response)
 
             # Commit any changes this iteration produced
             vcs.stage_all()

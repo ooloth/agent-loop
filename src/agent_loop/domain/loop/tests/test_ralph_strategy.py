@@ -148,3 +148,42 @@ class TestRalphStrategy:
         loop_until_done(work, strategy, vcs, 5, "", lambda _: None)
 
         assert "Do this: add tests to foo.py" in agent.prompts[0]
+
+    def test_scratchpad_passed_to_next_iteration(self) -> None:
+        agent = StubAgent(
+            [
+                "step 1\n\n```scratchpad\n## Status\nDid the first part.\n```",
+                "step 2\n##DONE##\n\n```scratchpad\n## Status\nAll done.\n```",
+            ]
+        )
+        strategy = RalphStrategy(agent=agent, prompt_template=TEMPLATE)
+        vcs = StubVCS(["diff", "diff"])
+        work = WorkSpec(title="test", body="the goal")
+
+        loop_until_done(work, strategy, vcs, 5, "", lambda _: None)
+
+        # First prompt should NOT have scratchpad context
+        assert "previous iteration" not in agent.prompts[0]
+        # Second prompt SHOULD have scratchpad from first iteration
+        assert "previous iteration" in agent.prompts[1]
+        assert "Did the first part." in agent.prompts[1]
+        # Final scratchpad is stored on the strategy
+        assert strategy.scratchpad == "## Status\nAll done."
+
+    def test_scratchpad_graceful_degradation(self) -> None:
+        agent = StubAgent(
+            [
+                "step 1 — no scratchpad in this response",
+                "step 2\n##DONE##",
+            ]
+        )
+        strategy = RalphStrategy(agent=agent, prompt_template=TEMPLATE)
+        vcs = StubVCS(["diff", "diff"])
+        work = WorkSpec(title="test", body="the goal")
+
+        result = loop_until_done(work, strategy, vcs, 5, "", lambda _: None)
+
+        # Should still converge — missing scratchpad doesn't break anything
+        assert result.converged is True
+        # Second prompt should NOT have scratchpad context (first response had none)
+        assert "previous iteration" not in agent.prompts[1]
