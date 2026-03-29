@@ -7,6 +7,7 @@ from agent_loop.domain.context import AppContext
 from agent_loop.domain.errors import AgentLoopError
 from agent_loop.features.analyze.command import cmd_analyze
 from agent_loop.features.fix.command import cmd_fix
+from agent_loop.features.ralph.command import cmd_ralph
 from agent_loop.features.watch.command import cmd_watch
 from agent_loop.io.adapters.claude_cli import EDIT_TOOLS, READ_ONLY_TOOLS, ClaudeCliBackend
 from agent_loop.io.adapters.git import GitBackend
@@ -25,6 +26,9 @@ def main() -> None:
               3. agent-loop fix               → fixes ready issues and opens PRs
               4. agent-loop fix --issue 42    → fix a specific issue
               5. agent-loop watch             → poll continuously
+
+            standalone:
+              agent-loop ralph -p 'add type hints to foo.py' -n 10
         """),
     )
     parser.add_argument(
@@ -41,6 +45,16 @@ def main() -> None:
 
     fix_parser = sub.add_parser("fix", help="Fix ready-to-fix issues")
     fix_parser.add_argument("--issue", "-i", type=int, help="Fix a specific issue number")
+
+    ralph_parser = sub.add_parser("ralph", help="Iterative fresh-eyes refinement toward a goal")
+    ralph_parser.add_argument("--prompt", "-p", required=True, help="Goal for the agent to achieve")
+    ralph_parser.add_argument(
+        "--max-iterations",
+        "-n",
+        type=int,
+        default=5,
+        help="Maximum iterations before stopping (default: 5)",
+    )
 
     watch_parser = sub.add_parser("watch", help="Poll continuously for work")
     watch_parser.add_argument(
@@ -71,6 +85,8 @@ def main() -> None:
             cmd_analyze(ctx)
         elif args.command == "fix":
             cmd_fix(ctx, issue_number=args.issue)
+        elif args.command == "ralph":
+            cmd_ralph(ctx, prompt=args.prompt, max_iterations=args.max_iterations)
         elif args.command == "watch":
             cmd_watch(ctx, interval=args.interval, max_open_issues=args.max_open_issues)
     except AgentLoopError as exc:
