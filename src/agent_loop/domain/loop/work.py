@@ -13,7 +13,7 @@ class WorkSpec:
     body: str
 
 
-def from_issue(issue: Issue) -> WorkSpec:
+def work_from_issue(issue: Issue) -> WorkSpec:
     """Create a WorkSpec from a tracked issue."""
     return WorkSpec(title=issue.title, body=issue.body)
 

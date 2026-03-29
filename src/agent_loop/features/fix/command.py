@@ -11,7 +11,7 @@ from agent_loop.domain.loop.engine import (
     loop_until_done,
 )
 from agent_loop.domain.loop.strategies import AntagonisticStrategy
-from agent_loop.domain.loop.work import from_issue
+from agent_loop.domain.loop.work import work_from_issue
 from agent_loop.domain.models.issues import Issue
 from agent_loop.features.fix.branch_session import BranchSession
 from agent_loop.features.fix.prompts import FIX_PROMPT_TEMPLATE, REVIEW_PROMPT
@@ -66,7 +66,7 @@ def cmd_fix(ctx: AppContext, issue_number: int | None = None) -> None:
 
 def fix_single_issue(ctx: AppContext, issue: Issue, max_iterations: int) -> None:
     """Fix a single issue with the review loop."""
-    work = from_issue(issue)
+    work = work_from_issue(issue)
     fix_start = time.monotonic()
     log(f"🔧 #{issue.number} {issue.title}")
 
