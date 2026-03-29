@@ -18,7 +18,7 @@ def from_issue(issue: Issue) -> WorkSpec:
     return WorkSpec(title=issue.title, body=issue.body)
 
 
-def from_prompt(prompt: str) -> WorkSpec:
+def work_from_prompt(prompt: str) -> WorkSpec:
     """Create a WorkSpec from a user-provided goal prompt.
 
     Title is a truncation for log display; body is the full prompt.

@@ -64,6 +64,7 @@ class StepCompleted:
     max_iterations: int
     elapsed_seconds: int
     done: bool
+    scratchpad: str = ""
 
 
 EngineEvent = (

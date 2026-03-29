@@ -9,9 +9,9 @@ from agent_loop.domain.loop.engine import (
     loop_until_done,
 )
 from agent_loop.domain.loop.strategies import RalphStrategy
-from agent_loop.domain.loop.work import from_prompt
+from agent_loop.domain.loop.work import work_from_prompt
 from agent_loop.features.ralph.prompts import RALPH_PROMPT_TEMPLATE
-from agent_loop.io.observability.logging import log, log_step
+from agent_loop.io.observability.logging import log, log_detail, log_step
 
 
 def _slugify(text: str, max_len: int = 50) -> str:
@@ -24,14 +24,22 @@ def _log_ralph_progress(event: EngineEvent) -> None:
     match event:
         case StepStarted(iteration=i, max_iterations=m):
             log_step(f"🔄 Step {i}/{m}...")
-        case StepCompleted(iteration=i, max_iterations=m, elapsed_seconds=s, done=done):
+        case StepCompleted(
+            iteration=i, max_iterations=m, elapsed_seconds=s, done=done, scratchpad=sp
+        ):
+            is_last = done or i >= m
             status = "✅ Done" if done else "→ continuing"
-            log_step(f"🔄 Step {i}/{m} — {status} ({s}s)", last=done or i >= m)
+            log_step(f"🔄 Step {i}/{m} — {status} ({s}s)", last=is_last and not sp)
+            if sp:
+                for line in sp.splitlines():
+                    log_detail(line, last_step=is_last)
+                if not is_last:
+                    log_detail("", last_step=False)  # blank line before next step
 
 
 def cmd_ralph(ctx: AppContext, prompt: str, max_iterations: int) -> None:
     """Run the Ralph loop: iterative fresh-eyes refinement toward a goal."""
-    work = from_prompt(prompt)
+    work = work_from_prompt(prompt)
     branch = f"ralph/{_slugify(prompt)}"
 
     log(f"🔁 Ralph: {work.title}")
