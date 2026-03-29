@@ -32,6 +32,9 @@ class StubVCS:
     def __init__(self, diffs: list[str]) -> None:
         self._diffs: Iterator[str] = iter(diffs)
 
+    def has_uncommitted_changes(self) -> bool:
+        return False
+
     def stage_all(self) -> None:
         pass
 

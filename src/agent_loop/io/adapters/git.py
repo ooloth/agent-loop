@@ -16,6 +16,10 @@ class GitBackend:
     def _git(self, *args: str) -> str:
         return run(["git", *args], cwd=self._project_dir)
 
+    def has_uncommitted_changes(self) -> bool:
+        output = self._git("status", "--porcelain")
+        return output.strip() != ""
+
     def stage_all(self) -> None:
         self._git("add", "-A")
 

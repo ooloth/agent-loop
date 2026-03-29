@@ -6,6 +6,10 @@ from typing import Protocol
 class VCSBackend(Protocol):
     """VCS operations used by the engine and fix pipeline."""
 
+    def has_uncommitted_changes(self) -> bool:
+        """Return True if the working tree or index has uncommitted changes."""
+        ...
+
     def stage_all(self) -> None:
         """Stage all current changes (git add -A equivalent)."""
         ...

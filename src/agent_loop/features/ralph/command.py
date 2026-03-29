@@ -2,6 +2,7 @@ import re
 import time
 
 from agent_loop.domain.context import AppContext
+from agent_loop.domain.errors import AgentLoopError
 from agent_loop.domain.loop.engine import (
     EngineEvent,
     StepCompleted,
@@ -39,6 +40,10 @@ def _log_ralph_progress(event: EngineEvent) -> None:
 
 def cmd_ralph(ctx: AppContext, prompt: str, max_iterations: int) -> None:
     """Run the Ralph loop: iterative fresh-eyes refinement toward a goal."""
+    if ctx.vcs.has_uncommitted_changes():
+        msg = "Working tree has uncommitted changes. Commit or stash them before running ralph."
+        raise AgentLoopError(msg)
+
     work = from_prompt(prompt)
     branch = f"ralph/{_slugify(prompt)}"
 
