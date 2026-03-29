@@ -9,7 +9,7 @@ from agent_loop.domain.loop.engine import (
     loop_until_done,
 )
 from agent_loop.domain.loop.strategies import RalphStrategy
-from agent_loop.domain.loop.work import from_prompt
+from agent_loop.domain.loop.work import work_from_prompt
 from agent_loop.features.ralph.prompts import RALPH_PROMPT_TEMPLATE
 from agent_loop.io.observability.logging import log, log_step
 
@@ -31,7 +31,7 @@ def _log_ralph_progress(event: EngineEvent) -> None:
 
 def cmd_ralph(ctx: AppContext, prompt: str, max_iterations: int) -> None:
     """Run the Ralph loop: iterative fresh-eyes refinement toward a goal."""
-    work = from_prompt(prompt)
+    work = work_from_prompt(prompt)
     branch = f"ralph/{_slugify(prompt)}"
 
     log(f"🔁 Ralph: {work.title}")
