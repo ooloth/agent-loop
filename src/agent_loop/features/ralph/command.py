@@ -1,5 +1,6 @@
 import re
 import time
+from pathlib import Path
 
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.loop.engine import (
@@ -9,7 +10,7 @@ from agent_loop.domain.loop.engine import (
     loop_until_done,
 )
 from agent_loop.domain.loop.strategies import RalphStrategy
-from agent_loop.domain.loop.work import from_prompt
+from agent_loop.domain.loop.work import WorkSpec, from_file, from_prompt
 from agent_loop.features.ralph.prompts import RALPH_PROMPT_TEMPLATE
 from agent_loop.io.observability.logging import log, log_detail, log_step
 
@@ -37,10 +38,25 @@ def _log_ralph_progress(event: EngineEvent) -> None:
                     log_detail("", last_step=False)
 
 
-def cmd_ralph(ctx: AppContext, prompt: str, max_iterations: int) -> None:
+def cmd_ralph(
+    ctx: AppContext,
+    max_iterations: int,
+    *,
+    prompt: str | None = None,
+    file: Path | None = None,
+) -> None:
     """Run the Ralph loop: iterative fresh-eyes refinement toward a goal."""
-    work = from_prompt(prompt)
-    branch = f"ralph/{_slugify(prompt)}"
+    work: WorkSpec
+    if file is not None:
+        work = from_file(file)
+    elif prompt is not None:
+        work = from_prompt(prompt)
+    else:
+        msg = "Either --prompt or --file is required"
+        raise ValueError(msg)
+
+    goal_source = prompt or work.body
+    branch = f"ralph/{_slugify(work.title)}"
 
     log(f"🔁 Ralph: {work.title}")
 
@@ -75,7 +91,7 @@ def cmd_ralph(ctx: AppContext, prompt: str, max_iterations: int) -> None:
 
         status = "completed" if result.converged else f"stopped after {result.iterations} steps"
         pr_body = (
-            f"**Goal:** {prompt}\n\n"
+            f"**Goal:** {goal_source}\n\n"
             f"**Status:** {status} ({elapsed}s total)\n\n"
             f"---\n\n"
             f"_Opened by `agent-loop ralph` — review before merging._"

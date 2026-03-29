@@ -47,7 +47,9 @@ def main() -> None:
     fix_parser.add_argument("--issue", "-i", type=int, help="Fix a specific issue number")
 
     ralph_parser = sub.add_parser("ralph", help="Iterative fresh-eyes refinement toward a goal")
-    ralph_parser.add_argument("--prompt", "-p", required=True, help="Goal for the agent to achieve")
+    ralph_goal = ralph_parser.add_mutually_exclusive_group(required=True)
+    ralph_goal.add_argument("--prompt", "-p", help="Goal for the agent to achieve")
+    ralph_goal.add_argument("--file", "-f", type=Path, help="Markdown file containing the goal")
     ralph_parser.add_argument(
         "--max-iterations",
         "-n",
@@ -86,7 +88,7 @@ def main() -> None:
         elif args.command == "fix":
             cmd_fix(ctx, issue_number=args.issue)
         elif args.command == "ralph":
-            cmd_ralph(ctx, prompt=args.prompt, max_iterations=args.max_iterations)
+            cmd_ralph(ctx, prompt=args.prompt, file=args.file, max_iterations=args.max_iterations)
         elif args.command == "watch":
             cmd_watch(ctx, interval=args.interval, max_open_issues=args.max_open_issues)
     except AgentLoopError as exc:
