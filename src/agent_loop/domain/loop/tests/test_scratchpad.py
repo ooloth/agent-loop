@@ -5,13 +5,7 @@ from agent_loop.domain.loop.strategies import extract_scratchpad
 
 class TestExtractScratchpad:
     def test_extracts_scratchpad_block(self) -> None:
-        response = (
-            "Made the change.\n\n"
-            "```scratchpad\n"
-            "## Status\n"
-            "Step 1 done.\n"
-            "```"
-        )
+        response = "Made the change.\n\n```scratchpad\n## Status\nStep 1 done.\n```"
         assert extract_scratchpad(response) == "## Status\nStep 1 done."
 
     def test_multiline_scratchpad(self) -> None:
@@ -36,13 +30,7 @@ class TestExtractScratchpad:
         assert extract_scratchpad(response) == ""
 
     def test_other_code_blocks_ignored(self) -> None:
-        response = (
-            "Here's the code:\n"
-            "```python\n"
-            "print('hello')\n"
-            "```\n\n"
-            "No scratchpad here."
-        )
+        response = "Here's the code:\n```python\nprint('hello')\n```\n\nNo scratchpad here."
         assert extract_scratchpad(response) == ""
 
     def test_scratchpad_with_surrounding_content(self) -> None:
