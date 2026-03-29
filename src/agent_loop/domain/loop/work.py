@@ -1,4 +1,9 @@
-"""Work specification — what to work on, decoupled from where it came from."""
+"""Work specification — what to work on, decoupled from where it came from.
+
+Three loaders build a WorkSpec from different sources: ``from_issue`` converts a
+tracked issue, ``from_prompt`` wraps a raw goal string, and ``from_spec`` (planned)
+will derive work directly from a project specification file.
+"""
 
 from dataclasses import dataclass
 
