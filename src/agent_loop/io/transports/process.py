@@ -20,5 +20,7 @@ def run(
     """
     result = subprocess.run(cmd, capture_output=capture, text=True, cwd=cwd, check=False)  # noqa: S603
     if check and result.returncode != 0:
-        raise SubprocessError(cmd=" ".join(cmd), stderr=result.stderr or "")
+        raise SubprocessError(
+            cmd=" ".join(cmd), stdout=result.stdout or "", stderr=result.stderr or ""
+        )
     return result.stdout.strip() if capture else ""
