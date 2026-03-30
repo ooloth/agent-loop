@@ -26,22 +26,22 @@ EFFORT_HELP = "Agent effort level (default: from config or 'high')"
 def _build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(
-        description="agent-loop: analyze, fix, and review code with AI agents.",
+        description="agency: automated multi-step workflows for AI coding agents.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""\
             workflow:
-              1. agent-loop analyze           → creates GitHub issues
+              1. agency analyze           → creates GitHub issues
               2. (human adds 'ready-to-fix' label to approved issues)
-              3. agent-loop fix               → fixes ready issues and opens PRs
-              4. agent-loop fix --issue 42    → fix a specific issue
-              5. agent-loop watch             → poll continuously
+              3. agency fix               → fixes ready issues and opens PRs
+              4. agency fix --issue 42    → fix a specific issue
+              5. agency watch             → poll continuously
 
             standalone:
-              agent-loop fix -f spec.md                              → fix with review from file
-              agent-loop fix -p 'handle edge case in parser'         → fix with review from prompt
-              agent-loop plan 'add error handling'                   → interactive planning
-              agent-loop ralph --plan .plans/add-error-handling.md   → execute a plan
-              agent-loop ralph -p 'add type hints to foo.py' -n 10  → quick goal
+              agency fix -f spec.md                                   → fix with review from file
+              agency fix -p 'handle edge case in parser'              → fix with review from prompt
+              agency plan 'add error handling'                        → interactive planning
+              agency ralph --plan .agency/plans/add-error-handling.md → execute a plan
+              agency ralph -p 'add type hints to foo.py' -n 10       → quick goal
         """),
     )
     parser.add_argument(
@@ -96,7 +96,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ralph_goal = ralph_parser.add_mutually_exclusive_group(required=True)
     ralph_goal.add_argument("--prompt", "-p", help="Goal for the agent to achieve")
     ralph_goal.add_argument("--file", "-f", type=Path, help="Markdown file containing the goal")
-    ralph_goal.add_argument("--plan", "-P", type=Path, help="Plan file from 'agent-loop plan'")
+    ralph_goal.add_argument("--plan", "-P", type=Path, help="Plan file from 'agency plan'")
     ralph_parser.add_argument(
         "--max-iterations",
         "-n",

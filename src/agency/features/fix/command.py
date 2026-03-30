@@ -245,7 +245,7 @@ def fix_from_spec(
             f"**Goal:** {work.body}\n\n"
             f"**Status:** {status} ({elapsed}s total)\n\n"
             f"---\n\n"
-            f"_Opened by `agent-loop fix` — review before merging._"
+            f"_Opened by `agency fix` — review before merging._"
         )
         pr_ref = ctx.tracker.open_pr(
             title=f"Fix: {work.title}",

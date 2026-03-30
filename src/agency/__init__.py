@@ -1,5 +1,5 @@
 """
-agent-loop: analyze a codebase for issues, fix them with review, open PRs.
+agency: automated multi-step workflows for AI coding agents.
 
 Workflow:
   1. analyze  — agent scans codebase, creates GitHub issues

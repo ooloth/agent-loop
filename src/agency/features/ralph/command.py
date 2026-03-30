@@ -123,7 +123,7 @@ def cmd_ralph(
             f"**Goal:** {work.body}\n\n"
             f"**Status:** {status} ({elapsed}s total)\n\n"
             f"---\n\n"
-            f"_Opened by `agent-loop ralph` — review before merging._"
+            f"_Opened by `agency ralph` — review before merging._"
         )
         pr_ref = ctx.tracker.open_pr(
             title=f"Ralph: {work.title}",
