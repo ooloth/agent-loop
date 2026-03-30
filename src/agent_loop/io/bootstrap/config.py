@@ -1,13 +1,11 @@
 """Load and merge .agent-loop.yml configuration."""
 
-import logging
 from pathlib import Path
 
 import yaml
 
 from agent_loop.domain.config import Config
-
-log = logging.getLogger("agent_loop")
+from agent_loop.io.observability.logging import log
 
 
 def load_config(project_dir: Path) -> Config:

@@ -1,13 +1,11 @@
 """Thin subprocess wrapper with structured error handling."""
 
-import logging
 import subprocess
 import time
 from pathlib import Path
 
 from agent_loop.io.errors import SubprocessError
-
-log = logging.getLogger("agent_loop")
+from agent_loop.io.observability.logging import log
 
 
 def run(

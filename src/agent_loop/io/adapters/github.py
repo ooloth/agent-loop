@@ -1,14 +1,12 @@
 """IssueTracker backed by the GitHub CLI (gh)."""
 
 import json
-import logging
 from enum import StrEnum
 
 from agent_loop.domain.models.issues import FoundIssue, Issue
 from agent_loop.io.errors import SubprocessError
+from agent_loop.io.observability.logging import log
 from agent_loop.io.transports.process import run
-
-log = logging.getLogger("agent_loop")
 
 # --- GitHub workflow labels (private implementation detail) ---
 # These are GitHub-specific mechanisms for expressing workflow state via issue

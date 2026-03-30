@@ -1,14 +1,12 @@
 """AgentBackend backed by the Claude CLI."""
 
-import logging
 import subprocess
 from pathlib import Path
 
 from agent_loop.domain.errors import AgentError
 from agent_loop.io.errors import SubprocessError
+from agent_loop.io.observability.logging import log
 from agent_loop.io.transports.process import run
-
-log = logging.getLogger("agent_loop")
 
 # Read-only tools for analysis and review (no filesystem writes or shell execution)
 READ_ONLY_TOOLS = "Read,Glob,Grep"
