@@ -5,8 +5,16 @@ from agent_loop.testing.stubs import StubAgent, StubTracker, make_ctx
 
 ANALYSIS_WITH_TWO_ISSUES = """```json
 [
-  {"title": "Missing error handling in parser", "body": "Crashes on empty input.", "labels": ["bug"]},
-  {"title": "Add type hints to utils", "body": "No annotations in utils.py.", "labels": ["enhancement"]}
+  {
+    "title": "Missing error handling in parser",
+    "body": "Crashes on empty input.",
+    "labels": ["bug"]
+  },
+  {
+    "title": "Add type hints to utils",
+    "body": "No annotations in utils.py.",
+    "labels": ["enhancement"]
+  }
 ]
 ```"""
 

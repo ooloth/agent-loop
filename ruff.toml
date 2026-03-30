@@ -33,6 +33,10 @@ unfixable = []
     "S106",    # hardcoded-password-func-arg – test fixtures pass literal tokens
     "SLF001",  # private-member-access       – white-box testing accesses privates
 ]
+"**/testing/**" = [
+    "D102",    # missing-docstring-in-public-method – stubs mirror protocol methods
+    "D107",    # missing-docstring-in-__init__      – stub constructors are self-evident
+]
 
 [lint.isort]
 known-first-party = ["agent_loop"]

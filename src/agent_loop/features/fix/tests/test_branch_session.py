@@ -2,7 +2,6 @@
 
 import pytest
 
-from agent_loop.domain.errors import AgentLoopError
 from agent_loop.features.fix.branch_session import BranchSession
 from agent_loop.testing.stubs import StubTracker, StubVCS, make_issue
 
@@ -71,10 +70,10 @@ class TestBranchSessionCleanup:
         issue = make_issue(number=3)
         tracker = StubTracker()
         vcs = StubVCS()
+        msg = "boom"
 
-        with pytest.raises(RuntimeError, match="boom"):
-            with BranchSession(issue, tracker, vcs):
-                raise RuntimeError("boom")
+        with pytest.raises(RuntimeError, match=msg), BranchSession(issue, tracker, vcs):
+            raise RuntimeError(msg)
 
         # Cleanup still happened
         assert vcs.deleted_branches == ["fix/issue-3"]
