@@ -7,7 +7,7 @@
 
 ## Overview
 
-Agency is a meta-harness that runs AI coding agents through automated multi-step workflows — analyze, plan, fix, review, repeat.
+Agency is a meta-harness that runs other AI coding agents through automated multi-step workflows.
 
 ## Features
 
