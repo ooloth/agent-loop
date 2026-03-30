@@ -1,3 +1,4 @@
+# Main app config
 """Application configuration loaded from .agent-loop.yml."""
 
 import os
