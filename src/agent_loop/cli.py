@@ -1,3 +1,4 @@
+# CLI entry point
 """CLI entry point — parse args, wire adapters, dispatch to feature commands."""
 
 import argparse
