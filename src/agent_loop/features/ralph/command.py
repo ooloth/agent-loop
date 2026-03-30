@@ -94,7 +94,7 @@ def cmd_ralph(
         elapsed = int(time.monotonic() - t0)
 
         if not result.has_changes:
-            log_step("⚠️  No changes were made", last=True)
+            log.warning("└── ⚠️  No changes were made")
             return
 
         ctx.vcs.push(branch)
@@ -130,4 +130,5 @@ def cmd_ralph(
     finally:
         ctx.vcs.checkout(default_branch)
         if not pushed:
+            log.warning("Cleaning up branch %s (no changes pushed)", branch)
             ctx.vcs.delete_branch(branch)

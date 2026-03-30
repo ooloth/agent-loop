@@ -61,13 +61,13 @@ def cmd_fix(
     if issue_number:
         issue = ctx.tracker.get_issue(issue_number)
         if issue is None:
-            log.info("⚠️  Issue #%d not found. Skipping.", issue_number)
+            log.warning("⚠️  Issue #%d not found. Skipping.", issue_number)
             return
         if not ctx.tracker.is_ready_to_fix(issue):
-            log.info("⚠️  Issue #%d is not labeled 'ready-to-fix'. Skipping.", issue_number)
+            log.warning("⚠️  Issue #%d is not labeled 'ready-to-fix'. Skipping.", issue_number)
             return
         if ctx.tracker.is_claimed(issue):
-            log.info("⚠️  Issue #%d already has 'agent-fix-in-progress'. Skipping.", issue_number)
+            log.warning("⚠️  Issue #%d already has 'agent-fix-in-progress'. Skipping.", issue_number)
             return
         issues = [issue]
     else:
@@ -112,7 +112,7 @@ def fix_single_issue(
         )
 
         if not result.has_changes:
-            log_step(f"⚠️  No changes for #{issue.number}. May already be fixed.", last=True)
+            log.warning("└── ⚠️  No changes for #%d. May already be fixed.", issue.number)
             ctx.tracker.comment_on_issue(
                 issue.number,
                 "## ⚠️ Agent made no changes\n\n"
@@ -187,7 +187,7 @@ def fix_from_spec(
         elapsed = int(time.monotonic() - t0)
 
         if not result.has_changes:
-            log_step("⚠️  No changes were made", last=True)
+            log.warning("└── ⚠️  No changes were made")
             return
 
         ctx.vcs.commit(f"fix: {work.title}")
@@ -225,4 +225,5 @@ def fix_from_spec(
     finally:
         ctx.vcs.checkout(default_branch)
         if not pushed:
+            log.warning("Cleaning up branch %s (no changes pushed)", branch)
             ctx.vcs.delete_branch(branch)

@@ -56,8 +56,8 @@ def cmd_watch(
         try:
             _poll_once(ctx, agents, max_open_issues)
         except AgentLoopError as exc:
-            log.info("❌ Error during poll: %s", exc)
-            log.info("   Will retry next cycle.")
+            log.warning("❌ Error during poll: %s", exc)
+            log.warning("   Will retry next cycle.")
 
         if stopping:
             break
