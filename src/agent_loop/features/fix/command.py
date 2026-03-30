@@ -1,4 +1,13 @@
-"""Fix command — pick up ready issues, run fix+review loop, open PRs."""
+"""Fix command — pick up ready issues, run fix+review loop, open PRs.
+
+Two modes:
+- Issue-based (cmd_fix): fetches issues from the tracker, runs through
+  BranchSession for branch lifecycle and issue locking.
+- Spec-based (fix_from_spec): works from a file or prompt, manages its
+  own branch lifecycle without issue locking.
+
+Both modes use AntagonisticStrategy and post a review trail on the PR.
+"""
 
 import re
 import time
@@ -70,7 +79,14 @@ def cmd_fix(
     review_agent: AgentBackend,
     issue_number: int | None = None,
 ) -> None:
-    """Pick up ready-to-fix issues and run the fix+review loop."""
+    """Pick up ready-to-fix issues and run the fix+review loop.
+
+    Guards (evaluated before acquiring any lock):
+    - --issue N with missing issue → log warning, skip.
+    - --issue N not ready-to-fix → log warning, skip.
+    - --issue N already claimed → log warning, skip.
+    - No ready issues → log "no issues ready to fix", return.
+    """
     max_iterations = ctx.config.max_iterations
 
     # Get issues to fix
@@ -104,7 +120,13 @@ def fix_single_issue(
     edit_agent: AgentBackend,
     review_agent: AgentBackend,
 ) -> None:
-    """Fix a single issue with the review loop."""
+    """Fix a single issue with the review loop.
+
+    No-changes path: if the engine produces no diff, posts a comment on the
+    issue with the implement agent's initial response for diagnostic context,
+    removes the ready-to-fix label, and lets BranchSession cleanup release
+    the lock and delete the branch. The human can re-add ready-to-fix to retry.
+    """
     work = from_issue(issue)
     fix_start = time.monotonic()
     log.info("🔧 #%d %s", issue.number, issue.title)
@@ -166,7 +188,15 @@ def fix_from_spec(
     edit_agent: AgentBackend,
     review_agent: AgentBackend,
 ) -> None:
-    """Run the antagonistic fix+review loop from a WorkSpec (file or prompt)."""
+    """Run the antagonistic fix+review loop from a WorkSpec (file or prompt).
+
+    Branch lifecycle:
+    - Rejects uncommitted changes upfront (raises AgentLoopError).
+    - Creates fix/<slugified-title> branch from the default branch.
+    - Opens a draft PR on success (converged or not).
+    - Always returns to the default branch on exit.
+    - Deletes the fix branch if nothing was pushed (early return or exception).
+    """
     if ctx.vcs.has_uncommitted_changes():
         msg = "Working tree has uncommitted changes. Commit or stash them before running fix."
         raise AgentLoopError(msg)

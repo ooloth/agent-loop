@@ -26,6 +26,15 @@ class BranchSession:
       - Always return to the default branch.
       - If commit_and_push() was never called (no changes, or an exception mid-fix),
         delete the branch and release the issue lock so it can be retried.
+
+    Invariants:
+      - Pull happens before claim, so a network failure doesn't leave the lock
+        stuck on an issue.
+      - commit_and_push() sets a flag that prevents cleanup from deleting the
+        branch and releasing the lock — the PR now owns the lifecycle.
+      - Each cleanup step is independently try/caught — a failure to delete the
+        branch does not prevent releasing the issue lock.
+      - Branch name is deterministic from the issue number: fix/issue-{number}.
     """
 
     def __init__(self, issue: Issue, tracker: IssueTracker, vcs: VCSBackend) -> None:

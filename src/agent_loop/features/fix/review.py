@@ -6,7 +6,15 @@ from agent_loop.domain.loop.strategies import ReviewEntry
 def format_review_comment(
     review_log: list[ReviewEntry], *, converged: bool, max_iterations: int
 ) -> str:
-    """Format the review trail as a readable GitHub comment."""
+    """Format the review trail as a readable GitHub comment.
+
+    Structure:
+    - Header with status: "✅ Passed after N iteration(s)" or
+      "⚠️ Did not converge after N iterations"
+    - Summary line: iteration count, approved count, rejected count
+    - All iterations except the last are collapsed in <details>/<summary>
+    - Last iteration is rendered open with a full ### heading
+    """
     total = len(review_log)
     approved_count = sum(1 for r in review_log if r["approved"])
     rejected_count = total - approved_count
