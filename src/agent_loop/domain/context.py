@@ -1,3 +1,5 @@
+"""AppContext — the fully wired runtime context passed to every feature."""
+
 from dataclasses import dataclass
 from pathlib import Path
 

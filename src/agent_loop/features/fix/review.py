@@ -1,3 +1,5 @@
+"""Format the review trail as a GitHub PR comment."""
+
 from agent_loop.domain.loop.strategies import ReviewEntry
 
 

@@ -1,3 +1,5 @@
+"""Prompt templates for the fix pipeline."""
+
 import textwrap
 
 FIX_PROMPT_TEMPLATE = textwrap.dedent("""\

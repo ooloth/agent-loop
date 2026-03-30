@@ -1,3 +1,5 @@
+"""Timestamped console logging for CLI output."""
+
 from datetime import datetime
 
 

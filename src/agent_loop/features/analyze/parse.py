@@ -1,3 +1,5 @@
+"""Parse agent analysis output into domain objects."""
+
 import json
 import re
 

@@ -1,3 +1,5 @@
+"""Plan command — interactive planning session for ralph-ready plans."""
+
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.ports.agent_backend import InteractiveAgentBackend
 from agent_loop.features.plan.prompts import PLAN_SYSTEM_PROMPT

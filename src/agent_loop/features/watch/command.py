@@ -1,3 +1,5 @@
+"""Watch command — poll for work in a continuous loop."""
+
 import signal
 import time
 
@@ -25,7 +27,7 @@ def cmd_watch(
     """
     stopping = False
 
-    def handle_signal(sig: int, frame: object) -> None:
+    def handle_signal(_sig: int, _frame: object) -> None:
         nonlocal stopping
         stopping = True
         log("\n⏹️  Stopping after current step completes...")

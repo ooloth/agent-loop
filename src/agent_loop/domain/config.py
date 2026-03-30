@@ -1,3 +1,5 @@
+"""Application configuration loaded from .agent-loop.yml."""
+
 import os
 from dataclasses import dataclass
 

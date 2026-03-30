@@ -1,3 +1,5 @@
+"""Thin subprocess wrapper with structured error handling."""
+
 import subprocess
 from pathlib import Path
 

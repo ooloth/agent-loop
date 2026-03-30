@@ -1,3 +1,5 @@
+"""Fix command — pick up ready issues, run fix+review loop, open PRs."""
+
 import time
 
 from agent_loop.domain.context import AppContext
@@ -106,7 +108,8 @@ def fix_single_issue(
                 "The agent ran but produced no diff. Here's what it said:\n\n"
                 f"{strategy.initial_response}\n\n"
                 "---\n\n"
-                "Removing `ready-to-fix` — re-add it to retry, or close the issue if it's resolved.",
+                "Removing `ready-to-fix` — re-add it to retry,"
+                " or close the issue if it's resolved.",
             )
             ctx.tracker.remove_ready_label(issue.number)
             return

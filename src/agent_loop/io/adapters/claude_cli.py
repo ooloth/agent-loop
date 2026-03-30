@@ -1,3 +1,5 @@
+"""AgentBackend backed by the Claude CLI."""
+
 import subprocess
 from pathlib import Path
 
@@ -26,6 +28,7 @@ class ClaudeCliBackend:
         model: str | None = None,
         effort: str = "high",
     ) -> None:
+        """Configure the CLI backend with project dir, tools, and model settings."""
         self._project_dir = project_dir
         self._allowed_tools = allowed_tools
         self._model = model
@@ -39,6 +42,7 @@ class ClaudeCliBackend:
         return args
 
     def run(self, prompt: str) -> str:
+        """Run a prompt non-interactively and return captured output."""
         try:
             return run(
                 [
@@ -55,6 +59,7 @@ class ClaudeCliBackend:
             raise AgentError(stderr=exc.stderr) from exc
 
     def session(self, *, system_prompt: str, initial_message: str | None = None) -> None:
+        """Launch an interactive Claude session in the user's terminal."""
         cmd = [
             "claude",
             "--append-system-prompt",

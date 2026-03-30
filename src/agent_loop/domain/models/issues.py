@@ -1,3 +1,5 @@
+"""Domain value objects for issues."""
+
 from dataclasses import dataclass
 
 

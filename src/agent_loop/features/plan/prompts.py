@@ -1,3 +1,5 @@
+"""System prompt for the interactive planning agent."""
+
 import textwrap
 
 PLAN_SYSTEM_PROMPT = textwrap.dedent("""\

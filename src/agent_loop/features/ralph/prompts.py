@@ -1,3 +1,5 @@
+"""Prompt template for the Ralph fresh-eyes agent."""
+
 import textwrap
 
 RALPH_PROMPT_TEMPLATE = textwrap.dedent("""\

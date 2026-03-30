@@ -1,3 +1,5 @@
+"""Analyze command — scan codebase and file issues."""
+
 import time
 
 from agent_loop.domain.context import AppContext

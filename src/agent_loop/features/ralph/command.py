@@ -1,3 +1,5 @@
+"""Ralph command — iterative fresh-eyes refinement toward a goal."""
+
 import re
 import time
 from pathlib import Path

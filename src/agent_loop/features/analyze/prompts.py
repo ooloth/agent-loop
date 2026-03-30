@@ -1,3 +1,5 @@
+"""Prompt templates for the analyze pipeline."""
+
 import textwrap
 
 ANALYZE_PROMPT = textwrap.dedent("""\

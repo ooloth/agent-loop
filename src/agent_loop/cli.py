@@ -1,3 +1,5 @@
+"""CLI entry point — parse args, wire adapters, dispatch to feature commands."""
+
 import argparse
 import sys
 import textwrap
@@ -20,6 +22,7 @@ EFFORT_HELP = "Agent effort level (default: from config or 'high')"
 
 
 def main() -> None:
+    """Parse CLI arguments and dispatch to the requested feature command."""
     parser = argparse.ArgumentParser(
         description="agent-loop: analyze, fix, and review code with AI agents.",
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -112,7 +112,9 @@ class LoopStrategy(Protocol):
         max_iterations: int,
         context: str,
         on_progress: ProgressCallback,
-    ) -> LoopResult: ...
+    ) -> LoopResult:
+        """Run the strategy's loop body and return the outcome."""
+        ...
 
 
 # ---------------------------------------------------------------------------

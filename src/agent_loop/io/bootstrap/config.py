@@ -1,3 +1,5 @@
+"""Load and merge .agent-loop.yml configuration."""
+
 from pathlib import Path
 
 import yaml
@@ -16,7 +18,7 @@ def load_config(project_dir: Path) -> Config:
     if not config_file.exists():
         return Config()
 
-    with open(config_file) as f:
+    with config_file.open() as f:
         raw = yaml.safe_load(f) or {}
 
     # Keep only keys that Config knows about, and drop nulls

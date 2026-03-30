@@ -41,6 +41,8 @@ _SCRATCHPAD_INSTRUCTIONS = textwrap.dedent("""\
 
 
 class ReviewEntry(TypedDict):
+    """One iteration's review verdict and feedback text."""
+
     iteration: int
     approved: bool
     feedback: str
@@ -96,6 +98,7 @@ class AntagonisticStrategy:
         fix_prompt_template: str,
         review_prompt: str,
     ) -> None:
+        """Wire the two opposing agents and their prompt templates."""
         self._implement_agent = implement_agent
         self._review_agent = review_agent
         self._fix_prompt_template = fix_prompt_template
@@ -112,6 +115,7 @@ class AntagonisticStrategy:
         context: str,
         on_progress: ProgressCallback,
     ) -> LoopResult:
+        """Run the implement → review → address-feedback loop."""
         notify = on_progress
 
         # Initial implementation
@@ -235,6 +239,7 @@ class RalphStrategy:
         agent: AgentBackend,
         prompt_template: str,
     ) -> None:
+        """Wire the single agent and its prompt template."""
         self._agent = agent
         self._prompt_template = prompt_template
         self._output_signal = OutputSignal()
@@ -249,6 +254,7 @@ class RalphStrategy:
         context: str,
         on_progress: ProgressCallback,
     ) -> LoopResult:
+        """Run fresh-eyes iterations until the goal is met or the cap is hit."""
         notify = on_progress
         converged = False
         iteration = 0
