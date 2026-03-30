@@ -2,6 +2,7 @@
 
 import re
 import time
+from collections.abc import Callable
 
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.errors import AgentLoopError
@@ -26,28 +27,35 @@ from agent_loop.features.fix.review import format_review_comment
 from agent_loop.io.observability.logging import log, log_detail, log_step
 
 
-def _log_engine_progress(event: EngineEvent) -> None:
-    """Translate engine progress events into tree-structured log output."""
-    match event:
-        case Implemented(elapsed_seconds=s):
-            log_step(f"🤖 Implemented fix ({s}s)")
-        case NoChanges():
-            log_step("⚠️  No changes were made", last=True)
-        case DiffReady(lines=n):
-            log.debug("Diff size: %d lines", n)
-            large_diff_threshold = 500
-            if n > large_diff_threshold:
-                log.warning("Large diff (%d lines) — agent may have over-scoped", n)
-        case ReviewApproved(iteration=i, max_iterations=m, elapsed_seconds=s):
-            log.debug("Review verdict: approved")
-            log_step(f"🔎 Review {i}/{m} — ✅ Approved ({s}s)")
-        case ReviewRejected(iteration=i, max_iterations=m, elapsed_seconds=s, summary=summary):
-            log.debug("Review verdict: rejected")
-            is_last = i >= m
-            log_step(f"🔎 Review {i}/{m} — 🔄 Changes requested ({s}s)", last=is_last)
-            log_detail(summary, last_step=is_last)
-        case AddressedFeedback(elapsed_seconds=s):
-            log_step(f"🤖 Addressed feedback ({s}s)")
+def _make_progress_logger(
+    issue_number: int | None = None,
+) -> Callable[[EngineEvent], None]:
+    """Build a progress callback that prefixes log lines with the issue number."""
+    tag = f"#{issue_number} " if issue_number else ""
+
+    def on_progress(event: EngineEvent) -> None:
+        match event:
+            case Implemented(elapsed_seconds=s):
+                log_step(f"{tag}🤖 Implemented fix ({s}s)")
+            case NoChanges():
+                log_step(f"{tag}⚠️  No changes were made", last=True)
+            case DiffReady(lines=n):
+                log.debug("%sDiff size: %d lines", tag, n)
+                large_diff_threshold = 500
+                if n > large_diff_threshold:
+                    log.warning("%sLarge diff (%d lines) — agent may have over-scoped", tag, n)
+            case ReviewApproved(iteration=i, max_iterations=m, elapsed_seconds=s):
+                log.debug("%sReview verdict: approved", tag)
+                log_step(f"{tag}🔎 Review {i}/{m} — ✅ Approved ({s}s)")
+            case ReviewRejected(iteration=i, max_iterations=m, elapsed_seconds=s, summary=summary):
+                log.debug("%sReview verdict: rejected", tag)
+                is_last = i >= m
+                log_step(f"{tag}🔎 Review {i}/{m} — 🔄 Changes requested ({s}s)", last=is_last)
+                log_detail(f"{tag}{summary}", last_step=is_last)
+            case AddressedFeedback(elapsed_seconds=s):
+                log_step(f"{tag}🤖 Addressed feedback ({s}s)")
+
+    return on_progress
 
 
 def _slugify(text: str, max_len: int = 50) -> str:
@@ -115,12 +123,12 @@ def fix_single_issue(
             options=LoopOptions(
                 max_iterations=max_iterations,
                 context=ctx.config.context,
-                on_progress=_log_engine_progress,
+                on_progress=_make_progress_logger(issue.number),
             ),
         )
 
         if not result.has_changes:
-            log.warning("└── ⚠️  No changes for #%d. May already be fixed.", issue.number)
+            log.warning("└── #%d ⚠️  No changes. May already be fixed.", issue.number)
             ctx.tracker.comment_on_issue(
                 issue.number,
                 "## ⚠️ Agent made no changes\n\n"
@@ -149,7 +157,7 @@ def fix_single_issue(
         ctx.tracker.comment_on_pr(pr_ref, review_comment)
 
         total_elapsed = int(time.monotonic() - fix_start)
-        log_step(f"🎉 PR opened ({total_elapsed}s total)", last=True)
+        log_step(f"#{issue.number} 🎉 PR opened ({total_elapsed}s total)", last=True)
 
 
 def fix_from_spec(
@@ -189,7 +197,7 @@ def fix_from_spec(
             options=LoopOptions(
                 max_iterations=max_iterations,
                 context=ctx.config.context,
-                on_progress=_log_engine_progress,
+                on_progress=_make_progress_logger(),
             ),
         )
         elapsed = int(time.monotonic() - t0)
