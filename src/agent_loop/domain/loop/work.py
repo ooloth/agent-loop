@@ -1,4 +1,9 @@
-"""Work specification — what to work on, decoupled from where it came from."""
+"""Work specification — what to work on, decoupled from where it came from.
+
+WorkSpec is the uniform input to loop_until_done(). Factory functions
+(from_issue, from_prompt, from_file) adapt different input sources into
+the same shape.
+"""
 
 import re
 from dataclasses import dataclass
@@ -9,7 +14,11 @@ from agent_loop.domain.models.issues import Issue
 
 @dataclass(frozen=True)
 class WorkSpec:
-    """A unit of work to be completed by the loop engine."""
+    """A unit of work to be completed by the loop engine.
+
+    Title is for display (may be truncated). Body is the full description
+    or goal text passed to the agent.
+    """
 
     title: str
     body: str

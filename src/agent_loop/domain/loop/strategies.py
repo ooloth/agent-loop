@@ -1,4 +1,9 @@
-"""Concrete loop strategies."""
+"""Concrete loop strategies.
+
+Two LoopStrategy implementations:
+- AntagonisticStrategy: implement → review → address-feedback with two agents
+- RalphStrategy: fresh-eyes iterative refinement with a single agent
+"""
 
 from __future__ import annotations
 
@@ -50,7 +55,17 @@ class ReviewEntry(TypedDict):
 
 
 def summarize_feedback(feedback: str, max_len: int = 80) -> str:
-    """Extract a one-line summary from reviewer feedback."""
+    """Extract a one-line summary from reviewer feedback for log display.
+
+    Extraction priority:
+    1. First line after a "#### 🔧 Required Changes" heading
+    2. First line after a "**Verdict**: CONCERNS" line
+    3. First substantive line (not a heading, bold, rule, or blockquote)
+    4. Falls back to "(no details)"
+
+    Strips markdown artifacts (bold, inline code, list markers). Truncates
+    with ellipsis at max_len.
+    """
     # Look for the Required Changes section first
     match = re.search(r"#{1,4}\s*🔧\s*Required Changes\s*\n(.+)", feedback)
     if match:
@@ -86,6 +101,17 @@ def summarize_feedback(feedback: str, max_len: int = 80) -> str:
 
 class AntagonisticStrategy:
     """Implement → review → address-feedback loop with two opposing agents.
+
+    Behavioral invariants:
+    - stage_all() is called after every implement agent run (initial and
+      feedback rounds), so the diff always reflects the latest agent output.
+    - The review agent sees the full cumulative diff, not just the delta from
+      the last iteration.
+    - The implement agent's feedback prompt includes both the reviewer's
+      feedback and the original issue, so it has full context even though it
+      has conversation history from prior turns.
+    - review_log records every review iteration, including the final one —
+      whether approved or rejected.
 
     After execution, strategy-specific state is available via attributes:
     - review_log: list[ReviewEntry] — full review trail
@@ -213,7 +239,8 @@ def extract_scratchpad(response: str) -> str:
     """Extract the scratchpad block from an agent response.
 
     Returns the content between ```scratchpad and ```, or empty string
-    if no scratchpad block is found (graceful degradation).
+    if no scratchpad block is found (graceful degradation). Other code
+    block types (e.g. ```python) are ignored.
     """
     match = re.search(r"```scratchpad\n(.*?)```", response, re.DOTALL)
     return match.group(1).strip() if match else ""
@@ -233,6 +260,18 @@ class RalphStrategy:
     context they need (why decisions were made, what's left) without the
     conformity pressure of a growing log — each agent writes its own
     assessment.
+
+    Behavioral invariants:
+    - Each iteration commits independently for crash safety and audit trail.
+      If the process dies mid-loop, completed iterations are preserved.
+    - Iterations that produce no diff are not committed (no empty commits),
+      but the loop continues — the agent may have been exploring.
+    - The scratchpad is the only context passed between iterations. The agent
+      has no conversation memory — it sees the codebase fresh each time.
+    - Missing scratchpad blocks do not break the loop. The next iteration
+      simply runs without prior-iteration context (graceful degradation).
+    - The completion signal (##DONE##) must appear on its own line (with
+      optional surrounding whitespace). Embedded in prose does not count.
 
     After execution, strategy-specific state is available via attributes:
     - responses: list[str] — each iteration's agent response

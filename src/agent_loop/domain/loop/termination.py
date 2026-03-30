@@ -1,4 +1,8 @@
-"""Termination conditions — when should the loop stop?"""
+"""Termination conditions — when should the loop stop?
+
+Each condition scans an agent's text response for a signal that work is
+complete. Used by loop strategies to decide whether to continue iterating.
+"""
 
 import re
 from typing import Protocol
@@ -13,7 +17,11 @@ class TerminationCondition(Protocol):
 
 
 class ReviewApproval:
-    """The response contains an LGTM verdict from a reviewer."""
+    """The response contains an LGTM verdict from a reviewer.
+
+    Scans for LGTM as a whole word, case-insensitive. Used by
+    AntagonisticStrategy to detect reviewer approval.
+    """
 
     def is_met(self, response: str) -> bool:
         """Return True if the response contains an LGTM verdict."""
@@ -21,7 +29,12 @@ class ReviewApproval:
 
 
 class OutputSignal:
-    """The response contains a completion token on its own line."""
+    """The response contains a completion token on its own line.
+
+    The token must be the only non-whitespace content on its line — embedded
+    in prose does not match. Default token: ##DONE##. Used by RalphStrategy
+    to detect goal completion.
+    """
 
     def __init__(self, token: str = "##DONE##") -> None:  # noqa: S107
         """Store the completion token to scan for."""

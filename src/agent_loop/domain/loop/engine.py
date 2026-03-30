@@ -1,4 +1,17 @@
-"""Generic loop engine — run a strategy to completion."""
+"""Generic loop engine — run a strategy to completion.
+
+This is the core abstraction all agent workflows (fix, ralph, future) build on.
+A single entry point (loop_until_done) accepts a pluggable LoopStrategy and runs
+it to completion. The engine has no knowledge of which AI provider, VCS system,
+or issue tracker is in use.
+
+Progress events (AntagonisticStrategy):
+    Implemented → [NoChanges | DiffReady → ReviewApproved/ReviewRejected
+                   → AddressedFeedback → DiffReady → ...]*
+
+Progress events (RalphStrategy):
+    [StepStarted → StepCompleted]*
+"""
 
 from __future__ import annotations
 
@@ -102,7 +115,12 @@ def _noop(_event: EngineEvent) -> None:
 
 @dataclass(frozen=True)
 class LoopResult:
-    """Outcome of a loop_until_done run."""
+    """Outcome of a loop_until_done run.
+
+    Strategy-specific state (review log, scratchpad, agent responses) lives on
+    the strategy instances, not here. Callers that need strategy-specific data
+    access it via the strategy object after the loop completes.
+    """
 
     converged: bool
     has_changes: bool
@@ -129,7 +147,11 @@ class LoopOptions:
 
 
 class LoopStrategy(Protocol):
-    """A pluggable strategy that drives one style of agent loop."""
+    """A pluggable strategy that drives one style of agent loop.
+
+    The engine calls execute() exactly once per loop_until_done() invocation.
+    The strategy owns the loop body and all iteration logic.
+    """
 
     def execute(
         self,
