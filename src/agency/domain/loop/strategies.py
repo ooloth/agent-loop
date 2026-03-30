@@ -1,0 +1,351 @@
+"""Concrete loop strategies.
+
+Two LoopStrategy implementations:
+- AntagonisticStrategy: implement → review → address-feedback with two agents
+- RalphStrategy: fresh-eyes iterative refinement with a single agent
+"""
+
+from __future__ import annotations
+
+import re
+import textwrap
+import time
+from typing import TypedDict
+
+from agency.domain.loop.engine import (
+    AddressedFeedback,
+    DiffReady,
+    Implemented,
+    LoopOptions,
+    LoopResult,
+    NoChanges,
+    ReviewApproved,
+    ReviewRejected,
+    StepCompleted,
+    StepStarted,
+)
+from agency.domain.loop.termination import OutputSignal, ReviewApproval
+from agency.domain.loop.work import WorkSpec
+from agency.domain.ports.agent_backend import AgentBackend
+from agency.domain.ports.vcs_backend import VCSBackend
+
+_SCRATCHPAD_INSTRUCTIONS = textwrap.dedent("""\
+
+    After making your change, end your response with a scratchpad for the
+    next iteration using this exact format:
+
+    ```scratchpad
+    ## Status
+    <what's done and what's in progress>
+
+    ## Key decisions
+    <choices made and why — help the next iteration understand your reasoning>
+
+    ## Remaining work
+    <what still needs to be done, if anything>
+    ```""")
+
+
+class ReviewEntry(TypedDict):
+    """One iteration's review verdict and feedback text."""
+
+    iteration: int
+    approved: bool
+    feedback: str
+
+
+def summarize_feedback(feedback: str, max_len: int = 80) -> str:
+    """Extract a one-line summary from reviewer feedback for log display.
+
+    Extraction priority:
+    1. First line after a "#### 🔧 Required Changes" heading
+    2. First line after a "**Verdict**: CONCERNS" line
+    3. First substantive line (not a heading, bold, rule, or blockquote)
+    4. Falls back to "(no details)"
+
+    Strips markdown artifacts (bold, inline code, list markers). Truncates
+    with ellipsis at max_len.
+    """
+    # Look for the Required Changes section first
+    match = re.search(r"#{1,4}\s*🔧\s*Required Changes\s*\n(.+)", feedback)
+    if match:
+        summary = match.group(1).strip()
+    else:
+        # Look for the CONCERNS verdict and take the line after it
+        match = re.search(r"\*\*Verdict\*\*:\s*CONCERNS\s*\n+(.+)", feedback)
+        if match:
+            summary = match.group(1).strip()
+        else:
+            # Fall back to first substantive line
+            for line in feedback.split("\n"):
+                stripped = line.strip()
+                if (
+                    stripped
+                    and not stripped.startswith("#")
+                    and not stripped.startswith("**")
+                    and not stripped.startswith("---")
+                    and not stripped.startswith(">")
+                ):
+                    summary = stripped
+                    break
+            else:
+                summary = "(no details)"
+    # Clean up markdown artifacts
+    summary = re.sub(r"\*\*(.+?)\*\*", r"\1", summary)  # remove bold
+    summary = re.sub(r"`(.+?)`", r"\1", summary)  # remove inline code
+    summary = summary.lstrip("- ").lstrip("* ")  # remove list markers
+    if len(summary) > max_len:
+        summary = summary[: max_len - 1] + "…"
+    return summary
+
+
+class AntagonisticStrategy:
+    """Implement → review → address-feedback loop with two opposing agents.
+
+    Behavioral invariants:
+    - stage_all() is called after every implement agent run (initial and
+      feedback rounds), so the diff always reflects the latest agent output.
+    - The review agent sees the full cumulative diff, not just the delta from
+      the last iteration.
+    - The implement agent's feedback prompt includes both the reviewer's
+      feedback and the original issue, so it has full context even though it
+      has conversation history from prior turns.
+    - review_log records every review iteration, including the final one —
+      whether approved or rejected.
+
+    After execution, strategy-specific state is available via attributes:
+    - review_log: list[ReviewEntry] — full review trail
+    - initial_response: str — the implement agent's first response
+    """
+
+    def __init__(
+        self,
+        implement_agent: AgentBackend,
+        review_agent: AgentBackend,
+        fix_prompt_template: str,
+        review_prompt: str,
+    ) -> None:
+        """Wire the two opposing agents and their prompt templates."""
+        self._implement_agent = implement_agent
+        self._review_agent = review_agent
+        self._fix_prompt_template = fix_prompt_template
+        self._review_prompt = review_prompt
+        self._review_approval = ReviewApproval()
+        self.review_log: list[ReviewEntry] = []
+        self.initial_response: str = ""
+
+    def execute(
+        self,
+        work: WorkSpec,
+        vcs: VCSBackend,
+        options: LoopOptions,
+    ) -> LoopResult:
+        """Run the implement → review → address-feedback loop."""
+        notify = options.on_progress
+        max_iterations = options.max_iterations
+        context = options.context
+
+        # Initial implementation
+        fix_prompt = self._fix_prompt_template.format(title=work.title, body=work.body)
+        if context:
+            fix_prompt = f"Project context:\n{context}\n\n{fix_prompt}"
+
+        t0 = time.monotonic()
+        self.initial_response = self._implement_agent.run(fix_prompt)
+        notify(Implemented(elapsed_seconds=int(time.monotonic() - t0)))
+        vcs.stage_all()
+
+        # Review loop
+        iteration = 0
+        converged = False
+
+        while iteration < max_iterations:
+            iteration += 1
+
+            diff = vcs.diff_staged()
+            if not diff:
+                notify(NoChanges())
+                break
+
+            notify(DiffReady(lines=diff.count("\n")))
+
+            review_prompt = (
+                self._review_prompt
+                + f"\n\n## Issue being fixed\n\nTitle: {work.title}\nDescription:\n{work.body}"
+                + f"\n\n## Diff to review\n\n{diff}"
+            )
+            if context:
+                review_prompt = f"Project context:\n{context}\n\n{review_prompt}"
+
+            t0 = time.monotonic()
+            feedback = self._review_agent.run(review_prompt)
+            review_elapsed = int(time.monotonic() - t0)
+            approved = self._review_approval.is_met(feedback)
+
+            self.review_log.append(
+                {
+                    "iteration": iteration,
+                    "approved": approved,
+                    "feedback": feedback,
+                }
+            )
+
+            if approved:
+                notify(
+                    ReviewApproved(
+                        iteration=iteration,
+                        max_iterations=max_iterations,
+                        elapsed_seconds=review_elapsed,
+                    )
+                )
+                converged = True
+                break
+
+            summary = summarize_feedback(feedback)
+            is_last_iteration = iteration >= max_iterations
+            notify(
+                ReviewRejected(
+                    iteration=iteration,
+                    max_iterations=max_iterations,
+                    elapsed_seconds=review_elapsed,
+                    summary=summary,
+                )
+            )
+
+            if is_last_iteration:
+                break
+
+            # Address feedback
+            fix_feedback_prompt = (
+                f"Your previous fix received this review feedback:\n\n{feedback}\n\n"
+                f"Original issue:\nTitle: {work.title}\nDescription:\n{work.body}\n\n"
+                f"Please address the concerns. Prefer the simplest solution — if a problem\n"
+                f"can be eliminated rather than handled, do that instead."
+            )
+            t0 = time.monotonic()
+            self._implement_agent.run(fix_feedback_prompt)
+            notify(AddressedFeedback(elapsed_seconds=int(time.monotonic() - t0)))
+            vcs.stage_all()
+
+        has_changes = bool(vcs.diff_staged())
+        return LoopResult(
+            converged=converged,
+            has_changes=has_changes,
+            iterations=iteration,
+        )
+
+
+def extract_scratchpad(response: str) -> str:
+    """Extract the scratchpad block from an agent response.
+
+    Returns the content between ```scratchpad and ```, or empty string
+    if no scratchpad block is found (graceful degradation). Other code
+    block types (e.g. ```python) are ignored.
+    """
+    match = re.search(r"```scratchpad\n(.*?)```", response, re.DOTALL)
+    return match.group(1).strip() if match else ""
+
+
+class RalphStrategy:
+    """Fresh-eyes iterative refinement with a single agent.
+
+    Each iteration the agent sees the current codebase with no memory of
+    prior iterations, compares it against the goal, and makes one
+    improvement — either new progress or correcting a prior step. Commits
+    after each iteration for crash safety and audit trail.
+
+    A scratchpad is passed between iterations: the agent outputs a
+    ```scratchpad block in its response, which the strategy extracts and
+    injects into the next iteration's prompt. This gives fresh eyes the
+    context they need (why decisions were made, what's left) without the
+    conformity pressure of a growing log — each agent writes its own
+    assessment.
+
+    Behavioral invariants:
+    - Each iteration commits independently for crash safety and audit trail.
+      If the process dies mid-loop, completed iterations are preserved.
+    - Iterations that produce no diff are not committed (no empty commits),
+      but the loop continues — the agent may have been exploring.
+    - The scratchpad is the only context passed between iterations. The agent
+      has no conversation memory — it sees the codebase fresh each time.
+    - Missing scratchpad blocks do not break the loop. The next iteration
+      simply runs without prior-iteration context (graceful degradation).
+    - The completion signal (##DONE##) must appear on its own line (with
+      optional surrounding whitespace). Embedded in prose does not count.
+
+    After execution, strategy-specific state is available via attributes:
+    - responses: list[str] — each iteration's agent response
+    - scratchpad: str — the final scratchpad content
+    """
+
+    def __init__(
+        self,
+        agent: AgentBackend,
+        prompt_template: str,
+    ) -> None:
+        """Wire the single agent and its prompt template."""
+        self._agent = agent
+        self._prompt_template = prompt_template
+        self._output_signal = OutputSignal()
+        self.responses: list[str] = []
+        self.scratchpad: str = ""
+
+    def execute(
+        self,
+        work: WorkSpec,
+        vcs: VCSBackend,
+        options: LoopOptions,
+    ) -> LoopResult:
+        """Run fresh-eyes iterations until the goal is met or the cap is hit."""
+        notify = options.on_progress
+        max_iterations = options.max_iterations
+        context = options.context
+        converged = False
+        iteration = 0
+        has_changes = False
+
+        for iteration in range(1, max_iterations + 1):
+            prompt = self._prompt_template.format(goal=work.body)
+            if context:
+                prompt = f"Project context:\n{context}\n\n{prompt}"
+            if self.scratchpad:
+                prompt += (
+                    "\n\nScratchpad from the previous iteration"
+                    " (use for context, but form your own assessment):\n\n"
+                    f"{self.scratchpad}"
+                )
+            prompt += _SCRATCHPAD_INSTRUCTIONS
+
+            notify(StepStarted(iteration=iteration, max_iterations=max_iterations))
+            t0 = time.monotonic()
+            response = self._agent.run(prompt)
+            elapsed = int(time.monotonic() - t0)
+            self.responses.append(response)
+            self.scratchpad = extract_scratchpad(response)
+
+            # Commit any changes this iteration produced
+            vcs.stage_all()
+            if vcs.diff_staged():
+                vcs.commit(f"ralph: step {iteration}")
+                has_changes = True
+
+            done = self._output_signal.is_met(response)
+            notify(
+                StepCompleted(
+                    iteration=iteration,
+                    max_iterations=max_iterations,
+                    elapsed_seconds=elapsed,
+                    done=done,
+                    scratchpad=self.scratchpad,
+                )
+            )
+
+            if done:
+                converged = True
+                break
+
+        return LoopResult(
+            converged=converged,
+            has_changes=has_changes,
+            iterations=iteration,
+        )

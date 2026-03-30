@@ -1,7 +1,7 @@
 # vim: ft=ini
 [importlinter]
 root_packages =
-    agent_loop
+    agency
 include_external_packages = True
 
 # --- Cross-layer architecture ---
@@ -12,10 +12,10 @@ include_external_packages = True
 name = Layered architecture
 type = layers
 layers =
-    agent_loop.cli
-    agent_loop.features
-    agent_loop.io
-    agent_loop.domain
+    agency.cli
+    agency.features
+    agency.io
+    agency.domain
 
 # --- Features may only use io.observability ---
 # Features receive backends via AppContext. They may use observability
@@ -26,11 +26,11 @@ layers =
 name = Features may no import io/ modules other than those in io.observability
 type = forbidden
 source_modules =
-    agent_loop.features
+    agency.features
 forbidden_modules =
-    agent_loop.io
+    agency.io
 ignore_imports =
-    agent_loop.features.** -> agent_loop.io.observability.**
+    agency.features.** -> agency.io.observability.**
 
 # --- io/ internal layering ---
 # bootstrap -> adapters -> transports (lower must not import higher).
@@ -39,9 +39,9 @@ ignore_imports =
 name = io/ internal layering (bootstrap -> adapters -> transports)
 type = layers
 layers =
-    agent_loop.io.bootstrap
-    agent_loop.io.adapters
-    agent_loop.io.transports
+    agency.io.bootstrap
+    agency.io.adapters
+    agency.io.transports
 
 # --- io/errors independence ---
 # io/errors.py may be imported by any io subpackage but depends on
@@ -51,12 +51,12 @@ layers =
 name = io/errors does not depend on io/ subpackages
 type = forbidden
 source_modules =
-    agent_loop.io.errors
+    agency.io.errors
 forbidden_modules =
-    agent_loop.io.adapters
-    agent_loop.io.bootstrap
-    agent_loop.io.transports
-    agent_loop.io.observability
+    agency.io.adapters
+    agency.io.bootstrap
+    agency.io.transports
+    agency.io.observability
 
 # --- Observability independence ---
 # Observability may be imported by any io subpackage but depends on
@@ -66,12 +66,12 @@ forbidden_modules =
 name = Observability does not depend on other io/ subpackages
 type = forbidden
 source_modules =
-    agent_loop.io.observability
+    agency.io.observability
 forbidden_modules =
-    agent_loop.io.adapters
-    agent_loop.io.bootstrap
-    agent_loop.io.transports
-    agent_loop.io.errors
+    agency.io.adapters
+    agency.io.bootstrap
+    agency.io.transports
+    agency.io.errors
 
 # --- domain/ internal rules ---
 # models and errors are leaves; ports depend on models only;
@@ -81,46 +81,46 @@ forbidden_modules =
 name = Models are domain leaves
 type = forbidden
 source_modules =
-    agent_loop.domain.models
+    agency.domain.models
 forbidden_modules =
-    agent_loop.domain.ports
-    agent_loop.domain.config
-    agent_loop.domain.context
-    agent_loop.domain.errors
-    agent_loop.domain.loop
+    agency.domain.ports
+    agency.domain.config
+    agency.domain.context
+    agency.domain.errors
+    agency.domain.loop
 
 [importlinter:contract:errors-are-leaves]
 name = Errors are domain leaves
 type = forbidden
 source_modules =
-    agent_loop.domain.errors
+    agency.domain.errors
 forbidden_modules =
-    agent_loop.domain.ports
-    agent_loop.domain.models
-    agent_loop.domain.config
-    agent_loop.domain.context
-    agent_loop.domain.loop
+    agency.domain.ports
+    agency.domain.models
+    agency.domain.config
+    agency.domain.context
+    agency.domain.loop
 
 [importlinter:contract:ports-depend-on-models-only]
 name = Ports depend only on models
 type = forbidden
 source_modules =
-    agent_loop.domain.ports
+    agency.domain.ports
 forbidden_modules =
-    agent_loop.domain.config
-    agent_loop.domain.context
-    agent_loop.domain.errors
-    agent_loop.domain.loop
+    agency.domain.config
+    agency.domain.context
+    agency.domain.errors
+    agency.domain.loop
 
 [importlinter:contract:loop-depends-on-models-and-ports]
 name = Loop depends only on domain models and ports
 type = forbidden
 source_modules =
-    agent_loop.domain.loop
+    agency.domain.loop
 forbidden_modules =
-    agent_loop.domain.config
-    agent_loop.domain.context
-    agent_loop.domain.errors
+    agency.domain.config
+    agency.domain.context
+    agency.domain.errors
 
 # --- stdlib logging banned outside observability ---
 # All logging must go through the shared logger in io.observability.logging.
@@ -130,20 +130,20 @@ forbidden_modules =
 name = Only io.observability.logging may import stdlib logging
 type = forbidden
 source_modules =
-    agent_loop
+    agency
 forbidden_modules =
     logging
 ignore_imports =
-    agent_loop.io.observability.logging -> logging
+    agency.io.observability.logging -> logging
 
 [importlinter:contract:context-is-terminal]
 name = Nothing in domain imports context
 type = forbidden
 source_modules =
-    agent_loop.domain.models
-    agent_loop.domain.ports
-    agent_loop.domain.config
-    agent_loop.domain.errors
-    agent_loop.domain.loop
+    agency.domain.models
+    agency.domain.ports
+    agency.domain.config
+    agency.domain.errors
+    agency.domain.loop
 forbidden_modules =
-    agent_loop.domain.context
+    agency.domain.context

@@ -1,6 +1,6 @@
-# agent-loop
+# agency
 
-Scan a codebase for issues, plan fixes, implement them with AI review, and refine iteratively.
+A meta-harness that runs AI coding agents through automated multi-step workflows — analyze, plan, fix, review, repeat.
 
 ## Features
 

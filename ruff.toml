@@ -39,7 +39,7 @@ unfixable = []
 ]
 
 [lint.isort]
-known-first-party = ["agent_loop"]
+known-first-party = ["agency"]
 
 [lint.flake8-tidy-imports.banned-api]
 "typing.TYPE_CHECKING".msg = "Unnecessary on Python 3.14+. Use regular imports instead."
