@@ -5,11 +5,14 @@ and pipelines are independent of which AI provider or invocation method is used.
 
 ---
 
-## Protocol definition
+## Protocol definitions
 
 ```
 AgentBackend:
   run(prompt: string) -> string
+
+InteractiveAgentBackend:
+  session(system_prompt: string, initial_message?: string) -> void
 ```
 
 ---
@@ -25,6 +28,16 @@ AgentBackend:
   construction time — not passed per call. This means you can construct two
   backend instances with different access levels and pass the right one for
   each role (implement vs. review).
+
+### InteractiveAgentBackend
+
+- `session()` hands control of the terminal to the user for an interactive
+  conversation with the agent. Used by the `plan` pipeline.
+- `session()` blocks until the user ends the conversation. It does not
+  capture or return the conversation — the agent writes artifacts (e.g. plan
+  files) directly to disk during the session.
+- The system prompt and optional initial message are passed at call time,
+  not at construction.
 
 ---
 

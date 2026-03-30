@@ -9,6 +9,7 @@ fix pipeline: staging, diffing, branching, committing, and pushing.
 
 ```
 VCSBackend:
+  has_uncommitted_changes()            -> bool    -- true if working tree or index is dirty
   stage_all()                          -> void    -- stage all changes (git add -A equivalent)
   diff_staged()                        -> string  -- return staged diff; empty string if none
   checkout(branch: string)             -> void    -- switch to an existing branch
@@ -23,6 +24,9 @@ VCSBackend:
 
 ## Contract
 
+- `has_uncommitted_changes()` checks both the working tree and the index. Used
+  as a guard by pipelines that manage their own branches (fix-from-spec, ralph)
+  to prevent starting work on a dirty tree.
 - `stage_all()` is idempotent. Calling it when nothing has changed is safe.
 - `diff_staged()` returns an empty string (not null, not an error) when there
   are no staged changes. Callers use the empty-string check to detect "no work

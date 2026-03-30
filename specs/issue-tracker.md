@@ -31,7 +31,7 @@ IssueTracker:
   remove_ready_label(number: integer)         -> void
   comment_on_issue(number: integer, body: string) -> void
   get_default_branch()                        -> string
-  open_pr(title: string, body: string, head: string) -> string
+  open_pr(title: string, body: string, head: string, draft?: bool) -> string
   comment_on_pr(pr_ref: string, body: string) -> void
 ```
 
