@@ -46,6 +46,13 @@ class ReviewRejected:
 
 
 @dataclass(frozen=True)
+class DiffReady:
+    """A staged diff is ready for review."""
+
+    lines: int
+
+
+@dataclass(frozen=True)
 class AddressedFeedback:
     """The implement agent addressed review feedback."""
 
@@ -74,6 +81,7 @@ class StepCompleted:
 EngineEvent = (
     Implemented
     | NoChanges
+    | DiffReady
     | ReviewApproved
     | ReviewRejected
     | AddressedFeedback
