@@ -1,6 +1,13 @@
 # agency
 
-A meta-harness that runs AI coding agents through automated multi-step workflows — analyze, plan, fix, review, repeat.
+> [!CAUTION]
+> **Agency is a research project. If your name is not Michael Uloth, do not use it.**
+>
+> This software is under active development and may change or break without notice. There is no support, no documentation guarantees, and no warranty of any kind. Use at your own risk.
+
+## Overview
+
+Agency is a meta-harness that runs AI coding agents through automated multi-step workflows — analyze, plan, fix, review, repeat.
 
 ## Features
 
@@ -32,3 +39,7 @@ fields are optional — sensible defaults are built in. See the `Config` type in
 - [Relocating Rigor](https://aicoding.leaflet.pub/3mbrvhyye4k2e) by Chad Fowler
 - [Skill Issue: Harness Engineering for Coding Agents](https://www.humanlayer.dev/blog/skill-issue-harness-engineering-for-coding-agents) by Kyle Mistele
 - [Engineer the Harness](https://mitchellh.com/writing/my-ai-adoption-journey#step-5-engineer-the-harness) by Mitchell Hashimoto
+
+## License
+
+Proprietary. Copyright (c) 2026 Michael Uloth. All rights reserved.
