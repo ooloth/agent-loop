@@ -8,7 +8,7 @@ Each pipeline orchestrates domain ports and the implement/review engine to carry
 out one user-facing workflow. Pipelines depend on `domain/` and may use
 `io/observability` for output, but never import adapters, bootstrap, or
 transports — they receive concrete backends via `AppContext` at the call site.
-See `specs/architecture.md` for the architectural rationale.
+See `ARCHITECTURE.md` at the repo root for the architectural rationale.
 
 ## Contents
 

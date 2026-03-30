@@ -3,7 +3,7 @@
 Shared types and contracts (the _what_).
 
 Nothing in this package depends on any external system. It is the contract the rest of the codebase
-is built around. See `specs/architecture.md` for the architectural rationale.
+is built around. See `ARCHITECTURE.md` at the repo root for the architectural rationale.
 
 - **`models/`** — Domain entities that flow through the system (`Issue`, `FoundIssue`). Pure data,
   no dependencies on other domain modules.

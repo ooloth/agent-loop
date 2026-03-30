@@ -6,4 +6,4 @@ Three packages, each with a distinct role:
 - **`io/`** — shared infrastructure and adapters (the _how_)
 - **`features/`** — vertical slices that compose them (the _when_ and _why_)
 
-See `specs/architecture.md` for the architectural rationale.
+See `ARCHITECTURE.md` at the repo root for the architectural rationale.

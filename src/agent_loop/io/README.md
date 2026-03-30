@@ -14,7 +14,7 @@ Every module belongs to one of four subpackages:
 - **`observability/`** — Cross-cutting I/O that any layer may use (logging, telemetry). Independent
   of the other subpackages.
 
-See `specs/architecture.md` for the full architectural rationale.
+See `ARCHITECTURE.md` at the repo root for the full architectural rationale.
 
 ## Dependency rules within io/
 
