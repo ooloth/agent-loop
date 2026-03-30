@@ -12,6 +12,7 @@ from agent_loop.domain.loop.engine import (
 )
 from agent_loop.domain.loop.strategies import RalphStrategy
 from agent_loop.domain.loop.work import WorkSpec, from_file, from_prompt
+from agent_loop.domain.ports.agent_backend import AgentBackend
 from agent_loop.features.ralph.prompts import RALPH_PROMPT_TEMPLATE
 from agent_loop.io.observability.logging import log, log_detail, log_step
 
@@ -41,6 +42,7 @@ def _log_ralph_progress(event: EngineEvent) -> None:
 
 def cmd_ralph(
     ctx: AppContext,
+    agent: AgentBackend,
     max_iterations: int,
     *,
     prompt: str | None = None,
@@ -72,7 +74,7 @@ def cmd_ralph(
     pushed = False
     try:
         strategy = RalphStrategy(
-            agent=ctx.edit_agent,
+            agent=agent,
             prompt_template=RALPH_PROMPT_TEMPLATE,
         )
         t0 = time.monotonic()

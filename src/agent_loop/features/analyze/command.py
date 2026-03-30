@@ -1,12 +1,13 @@
 import time
 
 from agent_loop.domain.context import AppContext
+from agent_loop.domain.ports.agent_backend import AgentBackend
 from agent_loop.features.analyze.parse import parse_analysis_results
 from agent_loop.features.analyze.prompts import ANALYZE_PROMPT
 from agent_loop.io.observability.logging import log
 
 
-def cmd_analyze(ctx: AppContext) -> None:
+def cmd_analyze(ctx: AppContext, agent: AgentBackend) -> None:
     """Analyze the codebase and create GitHub issues."""
     log("🔍 Analyzing codebase...")
 
@@ -15,7 +16,7 @@ def cmd_analyze(ctx: AppContext) -> None:
         prompt = f"Project context:\n{ctx.config.context}\n\n{prompt}"
 
     t0 = time.monotonic()
-    raw = ctx.read_agent.run(prompt)
+    raw = agent.run(prompt)
 
     found_issues = parse_analysis_results(raw)
 

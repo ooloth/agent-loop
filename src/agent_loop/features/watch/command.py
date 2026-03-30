@@ -3,12 +3,20 @@ import time
 
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.errors import AgentLoopError
+from agent_loop.domain.ports.agent_backend import AgentBackend
 from agent_loop.features.analyze.command import cmd_analyze
 from agent_loop.features.fix.command import cmd_fix
 from agent_loop.io.observability.logging import log, log_blank
 
 
-def cmd_watch(ctx: AppContext, interval: int, max_open_issues: int) -> None:
+def cmd_watch(
+    ctx: AppContext,
+    analysis_agent: AgentBackend,
+    coding_agent: AgentBackend,
+    review_agent: AgentBackend,
+    interval: int,
+    max_open_issues: int,
+) -> None:
     """Poll for work: fix ready issues, analyze when queue is low.
 
     Catches AgentLoopError per iteration so a transient failure (bad network,
@@ -31,7 +39,7 @@ def cmd_watch(ctx: AppContext, interval: int, max_open_issues: int) -> None:
 
     while not stopping:
         try:
-            _poll_once(ctx, max_open_issues)
+            _poll_once(ctx, analysis_agent, coding_agent, review_agent, max_open_issues)
         except AgentLoopError as exc:
             log(f"❌ Error during poll: {exc}")
             log("   Will retry next cycle.")
@@ -50,10 +58,16 @@ def cmd_watch(ctx: AppContext, interval: int, max_open_issues: int) -> None:
     log("👋 Stopped.")
 
 
-def _poll_once(ctx: AppContext, max_open_issues: int) -> None:
+def _poll_once(
+    ctx: AppContext,
+    analysis_agent: AgentBackend,
+    coding_agent: AgentBackend,
+    review_agent: AgentBackend,
+    max_open_issues: int,
+) -> None:
     """Run one fix + analyze cycle. Exceptions propagate to the caller."""
     # Step 1: Fix any ready-to-fix issues
-    cmd_fix(ctx)
+    cmd_fix(ctx, coding_agent, review_agent)
 
     # Step 2: Analyze if queue is below cap
     open_count = len(ctx.tracker.list_awaiting_review())
@@ -64,4 +78,4 @@ def _poll_once(ctx: AppContext, max_open_issues: int) -> None:
         )
     else:
         log(f"🔍 {open_count} issue(s) awaiting review (cap: {max_open_issues}) — running analysis")
-        cmd_analyze(ctx)
+        cmd_analyze(ctx, analysis_agent)

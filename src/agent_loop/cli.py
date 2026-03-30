@@ -3,6 +3,7 @@ import sys
 import textwrap
 from pathlib import Path
 
+from agent_loop.domain.config import resolve_planning_model
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.errors import AgentLoopError
 from agent_loop.features.analyze.command import cmd_analyze
@@ -14,6 +15,8 @@ from agent_loop.io.adapters.claude_cli import EDIT_TOOLS, READ_ONLY_TOOLS, Claud
 from agent_loop.io.adapters.git import GitBackend
 from agent_loop.io.adapters.github import GitHubTracker
 from agent_loop.io.bootstrap.config import load_config
+
+EFFORT_HELP = "Agent effort level (default: from config or 'high')"
 
 
 def main() -> None:
@@ -44,10 +47,15 @@ def main() -> None:
 
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("analyze", help="Analyze codebase and create GitHub issues")
+    analyze_parser = sub.add_parser("analyze", help="Analyze codebase and create GitHub issues")
+    analyze_parser.add_argument("--effort", "-e", help=EFFORT_HELP)
 
     fix_parser = sub.add_parser("fix", help="Fix ready-to-fix issues")
     fix_parser.add_argument("--issue", "-i", type=int, help="Fix a specific issue number")
+    fix_parser.add_argument("--effort", "-e", help=EFFORT_HELP)
+    fix_parser.add_argument(
+        "--review-effort", help="Review agent effort level (default: from config or 'high')"
+    )
 
     plan_parser = sub.add_parser(
         "plan",
@@ -61,6 +69,7 @@ def main() -> None:
         "-m",
         help="Model override (default: ANTHROPIC_DEFAULT_OPUS_MODEL or claude-opus-4-6)",
     )
+    plan_parser.add_argument("--effort", "-e", help=EFFORT_HELP)
 
     ralph_parser = sub.add_parser("ralph", help="Iterative fresh-eyes refinement toward a goal")
     ralph_goal = ralph_parser.add_mutually_exclusive_group(required=True)
@@ -74,6 +83,7 @@ def main() -> None:
         default=5,
         help="Maximum iterations before stopping (default: 5)",
     )
+    ralph_parser.add_argument("--effort", "-e", help=EFFORT_HELP)
 
     watch_parser = sub.add_parser("watch", help="Poll continuously for work")
     watch_parser.add_argument(
@@ -95,24 +105,86 @@ def main() -> None:
         config=config,
         tracker=GitHubTracker(),
         vcs=GitBackend(project_dir),
-        read_agent=ClaudeCliBackend(project_dir, allowed_tools=READ_ONLY_TOOLS),
-        edit_agent=ClaudeCliBackend(project_dir, allowed_tools=EDIT_TOOLS),
     )
 
     try:
         if args.command == "analyze":
-            cmd_analyze(ctx)
+            agent = ClaudeCliBackend(
+                project_dir,
+                allowed_tools=READ_ONLY_TOOLS,
+                model=config.analysis_agent_model,
+                effort=args.effort or config.analysis_agent_effort,
+            )
+            cmd_analyze(ctx, agent)
+
         elif args.command == "fix":
-            cmd_fix(ctx, issue_number=args.issue)
+            edit_agent = ClaudeCliBackend(
+                project_dir,
+                allowed_tools=EDIT_TOOLS,
+                model=config.coding_agent_model,
+                effort=args.effort or config.coding_agent_effort,
+            )
+            review_agent = ClaudeCliBackend(
+                project_dir,
+                allowed_tools=READ_ONLY_TOOLS,
+                model=config.review_agent_model,
+                effort=args.review_effort or config.review_agent_effort,
+            )
+            cmd_fix(ctx, edit_agent, review_agent, issue_number=args.issue)
+
         elif args.command == "plan":
-            cmd_plan(ctx, idea=args.idea, model=args.model)
+            resolved_model = resolve_planning_model(config.planning_agent_model, args.model)
+            agent = ClaudeCliBackend(
+                project_dir,
+                model=resolved_model,
+                effort=args.effort or config.planning_agent_effort,
+            )
+            cmd_plan(ctx, agent, idea=args.idea)
+
         elif args.command == "ralph":
+            agent = ClaudeCliBackend(
+                project_dir,
+                allowed_tools=EDIT_TOOLS,
+                model=config.coding_agent_model,
+                effort=args.effort or config.coding_agent_effort,
+            )
             plan_or_file = args.plan or args.file
             cmd_ralph(
-                ctx, prompt=args.prompt, file=plan_or_file, max_iterations=args.max_iterations
+                ctx,
+                agent,
+                prompt=args.prompt,
+                file=plan_or_file,
+                max_iterations=args.max_iterations,
             )
+
         elif args.command == "watch":
-            cmd_watch(ctx, interval=args.interval, max_open_issues=args.max_open_issues)
+            analysis_agent = ClaudeCliBackend(
+                project_dir,
+                allowed_tools=READ_ONLY_TOOLS,
+                model=config.analysis_agent_model,
+                effort=config.analysis_agent_effort,
+            )
+            coding_agent = ClaudeCliBackend(
+                project_dir,
+                allowed_tools=EDIT_TOOLS,
+                model=config.coding_agent_model,
+                effort=config.coding_agent_effort,
+            )
+            review_agent = ClaudeCliBackend(
+                project_dir,
+                allowed_tools=READ_ONLY_TOOLS,
+                model=config.review_agent_model,
+                effort=config.review_agent_effort,
+            )
+            cmd_watch(
+                ctx,
+                analysis_agent,
+                coding_agent,
+                review_agent,
+                interval=args.interval,
+                max_open_issues=args.max_open_issues,
+            )
+
     except AgentLoopError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)

@@ -13,6 +13,7 @@ from agent_loop.domain.loop.engine import (
 from agent_loop.domain.loop.strategies import AntagonisticStrategy
 from agent_loop.domain.loop.work import from_issue
 from agent_loop.domain.models.issues import Issue
+from agent_loop.domain.ports.agent_backend import AgentBackend
 from agent_loop.features.fix.branch_session import BranchSession
 from agent_loop.features.fix.prompts import FIX_PROMPT_TEMPLATE, REVIEW_PROMPT
 from agent_loop.features.fix.review import format_review_comment
@@ -36,7 +37,12 @@ def _log_engine_progress(event: EngineEvent) -> None:
             log_step("🤖 Addressing feedback...")
 
 
-def cmd_fix(ctx: AppContext, issue_number: int | None = None) -> None:
+def cmd_fix(
+    ctx: AppContext,
+    edit_agent: AgentBackend,
+    review_agent: AgentBackend,
+    issue_number: int | None = None,
+) -> None:
     """Pick up ready-to-fix issues and run the fix+review loop."""
     max_iterations = ctx.config.max_iterations
 
@@ -61,10 +67,16 @@ def cmd_fix(ctx: AppContext, issue_number: int | None = None) -> None:
         return
 
     for issue in issues:
-        fix_single_issue(ctx, issue, max_iterations)
+        fix_single_issue(ctx, issue, max_iterations, edit_agent, review_agent)
 
 
-def fix_single_issue(ctx: AppContext, issue: Issue, max_iterations: int) -> None:
+def fix_single_issue(
+    ctx: AppContext,
+    issue: Issue,
+    max_iterations: int,
+    edit_agent: AgentBackend,
+    review_agent: AgentBackend,
+) -> None:
     """Fix a single issue with the review loop."""
     work = from_issue(issue)
     fix_start = time.monotonic()
@@ -72,8 +84,8 @@ def fix_single_issue(ctx: AppContext, issue: Issue, max_iterations: int) -> None
 
     with BranchSession(issue, ctx.tracker, ctx.vcs) as session:
         strategy = AntagonisticStrategy(
-            implement_agent=ctx.edit_agent,
-            review_agent=ctx.read_agent,
+            implement_agent=edit_agent,
+            review_agent=review_agent,
             fix_prompt_template=ctx.config.fix_prompt_template or FIX_PROMPT_TEMPLATE,
             review_prompt=ctx.config.review_prompt or REVIEW_PROMPT,
         )
