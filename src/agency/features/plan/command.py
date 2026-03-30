@@ -8,8 +8,8 @@ from agency.io.observability.logging import log
 
 def cmd_plan(ctx: AppContext, agent: InteractiveAgentBackend, *, idea: str | None = None) -> None:
     """Launch an interactive planning session to produce a ralph-ready plan file."""
-    plans_dir = ctx.project_dir / ".plans"
-    plans_dir.mkdir(exist_ok=True)
+    plans_dir = ctx.project_dir / ".agency" / "plans"
+    plans_dir.mkdir(parents=True, exist_ok=True)
 
     system_prompt = PLAN_SYSTEM_PROMPT
     if ctx.config.context:

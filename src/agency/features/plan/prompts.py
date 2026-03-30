@@ -89,12 +89,12 @@ PLAN_SYSTEM_PROMPT = textwrap.dedent("""\
 
     ### Phase 6: Write the Plan File
 
-    Write the final plan to .plans/<slugified-title>.md using the format below.
-    Create the .plans/ directory if it doesn't exist.
+    Write the final plan to .agency/plans/<slugified-title>.md using the format below.
+    Create the .agency/plans/ directory if it doesn't exist.
 
     After writing, tell the user the file path and how to run it:
 
-        agent-loop ralph --plan .plans/<filename>.md
+        agency ralph --plan .agency/plans/<filename>.md
 
     ## Plan File Format
 
