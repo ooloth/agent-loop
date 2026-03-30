@@ -1,8 +1,10 @@
 """Fix command — pick up ready issues, run fix+review loop, open PRs."""
 
+import re
 import time
 
 from agent_loop.domain.context import AppContext
+from agent_loop.domain.errors import AgentLoopError
 from agent_loop.domain.loop.engine import (
     AddressingFeedback,
     EngineEvent,
@@ -14,7 +16,7 @@ from agent_loop.domain.loop.engine import (
     loop_until_done,
 )
 from agent_loop.domain.loop.strategies import AntagonisticStrategy
-from agent_loop.domain.loop.work import from_issue
+from agent_loop.domain.loop.work import WorkSpec, from_issue
 from agent_loop.domain.models.issues import Issue
 from agent_loop.domain.ports.agent_backend import AgentBackend
 from agent_loop.features.fix.branch_session import BranchSession
@@ -38,6 +40,12 @@ def _log_engine_progress(event: EngineEvent) -> None:
             log_detail(summary, last_step=is_last)
         case AddressingFeedback():
             log_step("🤖 Addressing feedback...")
+
+
+def _slugify(text: str, max_len: int = 50) -> str:
+    """Convert text to a branch-name-safe slug."""
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return slug[:max_len].rstrip("-")
 
 
 def cmd_fix(
@@ -134,3 +142,87 @@ def fix_single_issue(
 
         total_elapsed = int(time.monotonic() - fix_start)
         log_step(f"🎉 PR opened ({total_elapsed}s total)", last=True)
+
+
+def fix_from_spec(
+    ctx: AppContext,
+    work: WorkSpec,
+    edit_agent: AgentBackend,
+    review_agent: AgentBackend,
+) -> None:
+    """Run the antagonistic fix+review loop from a WorkSpec (file or prompt)."""
+    if ctx.vcs.has_uncommitted_changes():
+        msg = "Working tree has uncommitted changes. Commit or stash them before running fix."
+        raise AgentLoopError(msg)
+
+    max_iterations = ctx.config.max_iterations
+    branch = f"fix/{_slugify(work.title)}"
+
+    log.info("🔧 Fix: %s", work.title)
+
+    default_branch = ctx.tracker.get_default_branch()
+    ctx.vcs.checkout(default_branch)
+    ctx.vcs.pull(default_branch)
+    ctx.vcs.checkout_new_branch(branch)
+
+    pushed = False
+    try:
+        strategy = AntagonisticStrategy(
+            implement_agent=edit_agent,
+            review_agent=review_agent,
+            fix_prompt_template=ctx.config.fix_prompt_template or FIX_PROMPT_TEMPLATE,
+            review_prompt=ctx.config.review_prompt or REVIEW_PROMPT,
+        )
+        t0 = time.monotonic()
+        result = loop_until_done(
+            work=work,
+            strategy=strategy,
+            vcs=ctx.vcs,
+            options=LoopOptions(
+                max_iterations=max_iterations,
+                context=ctx.config.context,
+                on_progress=_log_engine_progress,
+            ),
+        )
+        elapsed = int(time.monotonic() - t0)
+
+        if not result.has_changes:
+            log_step("⚠️  No changes were made", last=True)
+            return
+
+        ctx.vcs.commit(f"fix: {work.title}")
+        ctx.vcs.push(branch)
+        pushed = True
+
+        status = "converged" if result.converged else f"stopped after {result.iterations} reviews"
+        pr_body = (
+            f"**Goal:** {work.body}\n\n"
+            f"**Status:** {status} ({elapsed}s total)\n\n"
+            f"---\n\n"
+            f"_Opened by `agent-loop fix` — review before merging._"
+        )
+        pr_ref = ctx.tracker.open_pr(
+            title=f"Fix: {work.title}",
+            body=pr_body,
+            head=branch,
+            draft=True,
+        )
+
+        # Post review trail as a PR comment
+        review_comment = format_review_comment(
+            strategy.review_log, converged=result.converged, max_iterations=max_iterations
+        )
+        ctx.tracker.comment_on_pr(pr_ref, review_comment)
+
+        if result.converged:
+            log_step(f"🎉 Done — draft PR opened ({elapsed}s total)", last=True)
+        else:
+            log_step(
+                f"⚠️  Hit iteration cap ({result.iterations}/{max_iterations})"
+                f" — draft PR opened ({elapsed}s total)",
+                last=True,
+            )
+    finally:
+        ctx.vcs.checkout(default_branch)
+        if not pushed:
+            ctx.vcs.delete_branch(branch)

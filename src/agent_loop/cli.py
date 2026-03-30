@@ -8,8 +8,9 @@ from pathlib import Path
 from agent_loop.domain.config import Config, resolve_planning_model
 from agent_loop.domain.context import AppContext
 from agent_loop.domain.errors import AgentLoopError
+from agent_loop.domain.loop.work import from_file, from_prompt
 from agent_loop.features.analyze.command import cmd_analyze
-from agent_loop.features.fix.command import cmd_fix
+from agent_loop.features.fix.command import cmd_fix, fix_from_spec
 from agent_loop.features.plan.command import cmd_plan
 from agent_loop.features.ralph.command import cmd_ralph
 from agent_loop.features.watch.command import WatchAgents, cmd_watch
@@ -36,6 +37,8 @@ def _build_parser() -> argparse.ArgumentParser:
               5. agent-loop watch             → poll continuously
 
             standalone:
+              agent-loop fix -f spec.md                              → fix with review from file
+              agent-loop fix -p 'handle edge case in parser'         → fix with review from prompt
               agent-loop plan 'add error handling'                   → interactive planning
               agent-loop ralph --plan .plans/add-error-handling.md   → execute a plan
               agent-loop ralph -p 'add type hints to foo.py' -n 10  → quick goal
@@ -55,7 +58,10 @@ def _build_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument("--effort", "-e", help=EFFORT_HELP)
 
     fix_parser = sub.add_parser("fix", help="Fix ready-to-fix issues")
-    fix_parser.add_argument("--issue", "-i", type=int, help="Fix a specific issue number")
+    fix_source = fix_parser.add_mutually_exclusive_group()
+    fix_source.add_argument("--issue", "-i", type=int, help="Fix a specific issue number")
+    fix_source.add_argument("--file", "-f", type=Path, help="Markdown file describing the fix")
+    fix_source.add_argument("--prompt", "-p", help="Inline description of what to fix")
     fix_parser.add_argument("--effort", "-e", help=EFFORT_HELP)
     fix_parser.add_argument(
         "--review-effort", help="Review agent effort level (default: from config or 'high')"
@@ -129,7 +135,11 @@ def _dispatch(args: argparse.Namespace, ctx: AppContext, config: Config) -> None
             model=config.review_agent_model,
             effort=args.review_effort or config.review_agent_effort,
         )
-        cmd_fix(ctx, edit_agent, review_agent, issue_number=args.issue)
+        if args.file or args.prompt:
+            work = from_file(args.file) if args.file else from_prompt(args.prompt)
+            fix_from_spec(ctx, work, edit_agent, review_agent)
+        else:
+            cmd_fix(ctx, edit_agent, review_agent, issue_number=args.issue)
 
     elif args.command == "plan":
         resolved_model = resolve_planning_model(config.planning_agent_model, args.model)
