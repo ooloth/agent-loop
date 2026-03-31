@@ -21,11 +21,11 @@ Agency is a meta-harness that runs other AI coding agents through automated mult
 
 ```mermaid
 graph TD
-    CLI["CLI"]
-    CLI --> Pipelines["Feature Pipelines: analyze · fix · plan · ralph · watch"]
-    Pipelines --> Engine["Domain Engine: loop_until_done()"]
-    Pipelines --> Ports["Ports / Protocols: AgentBackend · VCSBackend · IssueTracker"]
-    Ports --> Adapters["Adapters: ClaudeCliBackend · GitBackend · GitHubTracker"]
+    CLI["<b>Entrypoints</b><br/>CLI"]
+    CLI --> Pipelines["<b>Feature Pipelines</b><br/>analyze · fix · plan · ralph · watch"]
+    Pipelines --> Engine["<b>Domain Engine</b><br/>loop_until_done()"]
+    Pipelines --> Ports["<b>Ports / Protocols</b><br/>AgentBackend · VCSBackend · IssueTracker"]
+    Ports --> Adapters["<b>Adapters</b><br/>ClaudeCliBackend · GitBackend · GitHubTracker"]
 ```
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the domain engine, feature pipelines, and domain types in detail.
