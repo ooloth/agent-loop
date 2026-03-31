@@ -34,8 +34,9 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for more detail.
 ## Configuration
 
 Optionally add a `.agency/config.yml` in your project root to customize behavior.
-All fields are optional — sensible defaults are built in. See the `Config` type
-in [`ARCHITECTURE.md`](ARCHITECTURE.md#domain-types) for the full schema.
+All fields are optional — sensible defaults are built in.
+
+See the `Config` type in [`ARCHITECTURE.md`](ARCHITECTURE.md#domain-types) for the full schema.
 
 ## Inspiration
 
