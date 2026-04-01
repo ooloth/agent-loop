@@ -1,6 +1,16 @@
 """Domain exceptions raised by adapters and pipelines, caught at the CLI boundary."""
 
 
+class InvariantError(RuntimeError):
+    """A programmer assumption was found to be false at runtime."""
+
+
+def invariant(condition: bool, message: str) -> None:  # noqa: FBT001
+    """Raise InvariantError if condition is False."""
+    if not condition:
+        raise InvariantError(message)
+
+
 class AgentLoopError(Exception):
     """Base for all agent-loop errors. CLI catches this to exit cleanly."""
 
