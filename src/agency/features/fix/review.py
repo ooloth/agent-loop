@@ -1,5 +1,6 @@
 """Format the review trail as a GitHub PR comment."""
 
+from agency.domain.errors import invariant
 from agency.domain.loop.strategies import ReviewEntry
 
 
@@ -15,6 +16,7 @@ def format_review_comment(
     - All iterations except the last are collapsed in <details>/<summary>
     - Last iteration is rendered open with a full ### heading
     """
+    invariant(len(review_log) > 0, "review_log should never be empty")
     total = len(review_log)
     approved_count = sum(1 for r in review_log if r["approved"])
     rejected_count = total - approved_count

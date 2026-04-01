@@ -1,5 +1,8 @@
 """Tests for the review comment formatter."""
 
+import pytest
+
+from agency.domain.errors import InvariantError
 from agency.domain.loop.strategies import ReviewEntry
 from agency.features.fix.review import format_review_comment
 
@@ -45,6 +48,6 @@ class TestFormatReviewComment:
         assert "**0** approved" in result
         assert "**2** requested changes" in result
 
-    def test_empty_log(self) -> None:
-        result = format_review_comment([], converged=False, max_iterations=5)
-        assert "**0** iterations" in result
+    def test_empty_log_raises(self) -> None:
+        with pytest.raises(InvariantError, match="review_log should never be empty"):
+            format_review_comment([], converged=False, max_iterations=5)
