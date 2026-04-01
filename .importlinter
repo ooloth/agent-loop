@@ -6,13 +6,13 @@ include_external_packages = True
 
 # --- Cross-layer architecture ---
 # Lower layers must not import higher layers.
-# domain < io < features < cli (the entrypoint)
+# domain < io < features < entrypoints (composition roots)
 
 [importlinter:contract:layers]
 name = Layered architecture
 type = layers
 layers =
-    agency.cli
+    agency.entrypoints
     agency.features
     agency.io
     agency.domain

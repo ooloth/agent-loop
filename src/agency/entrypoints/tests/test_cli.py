@@ -4,9 +4,9 @@ import argparse
 
 import pytest
 
-from agency.cli import _dispatch
 from agency.domain.config import Config
 from agency.domain.errors import InvariantError
+from agency.entrypoints.cli import _dispatch
 from agency.features.tests.context import make_ctx
 
 

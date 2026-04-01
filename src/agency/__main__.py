@@ -1,5 +1,5 @@
 """Entry point for ``python -m agency``."""
 
-from agency.cli import main
+from agency.entrypoints.cli import main
 
 main()

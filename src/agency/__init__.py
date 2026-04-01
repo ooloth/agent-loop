@@ -7,6 +7,6 @@ Workflow:
   3. fix      — picks up ready-to-fix issues, runs fix+review loop, opens PRs
 """
 
-from agency.cli import main
+from agency.entrypoints.cli import main
 
 __all__ = ["main"]
