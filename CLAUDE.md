@@ -1,1 +1,1 @@
-Checks: `prek run --all-files`
+AGENTS.md
