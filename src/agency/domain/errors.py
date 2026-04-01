@@ -8,13 +8,11 @@ class InvariantError(RuntimeError):
 def invariant(condition: bool, rule: str, **values: object) -> None:  # noqa: FBT001
     """Raise InvariantError if condition is False.
 
-    rule: state the violated constraint using "should never", e.g.
-        "max_iterations should never be < 1"
+    rule: state the violated constraint using "should never", e.g. "max should never be < 1"
 
-    values: variables involved in the condition, included in the error
-        message as key=value pairs to surface the failing runtime state, e.g.
-        invariant(max_iterations >= 1, "...", max_iterations=max_iterations)
-        → InvariantError: max_iterations should never be < 1 (max_iterations=0)
+    values: variables involved in the condition, optionally included in the error message as
+        key=value pairs to surface the bad runtime state, e.g. invariant(max >= 1, "...", max=max)
+        → InvariantError: max should never be < 1 (max=0)
     """
     if not condition:
         detail = ", ".join(f"{k}={v!r}" for k, v in values.items())
