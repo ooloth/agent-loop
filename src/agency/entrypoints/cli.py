@@ -23,6 +23,14 @@ from agency.io.observability.logging import configure_logging, log
 EFFORT_HELP = "Agent effort level (default: from config or 'high')"
 
 
+def _non_empty_string(value: str) -> str:
+    """Argparse type that rejects blank strings."""
+    if not value.strip():
+        msg = "must not be blank"
+        raise argparse.ArgumentTypeError(msg)
+    return value
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(
@@ -72,7 +80,9 @@ def _build_parser() -> argparse.ArgumentParser:
     fix_source = fix_parser.add_mutually_exclusive_group()
     fix_source.add_argument("--issue", "-i", type=int, help="Fix a specific issue number")
     fix_source.add_argument("--file", "-f", type=Path, help="Markdown file describing the fix")
-    fix_source.add_argument("--prompt", "-p", help="Inline description of what to fix")
+    fix_source.add_argument(
+        "--prompt", "-p", type=_non_empty_string, help="Inline description of what to fix"
+    )
     fix_parser.add_argument("--effort", "-e", help=EFFORT_HELP)
     fix_parser.add_argument(
         "--review-effort", help="Review agent effort level (default: from config or 'high')"
@@ -94,7 +104,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     ralph_parser = sub.add_parser("ralph", help="Iterative fresh-eyes refinement toward a goal")
     ralph_goal = ralph_parser.add_mutually_exclusive_group(required=True)
-    ralph_goal.add_argument("--prompt", "-p", help="Goal for the agent to achieve")
+    ralph_goal.add_argument(
+        "--prompt", "-p", type=_non_empty_string, help="Goal for the agent to achieve"
+    )
     ralph_goal.add_argument("--file", "-f", type=Path, help="Markdown file containing the goal")
     ralph_goal.add_argument("--plan", "-P", type=Path, help="Plan file from 'agency plan'")
     ralph_parser.add_argument(
