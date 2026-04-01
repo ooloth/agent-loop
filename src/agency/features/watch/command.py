@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass
 
 from agency.domain.context import AppContext
-from agency.domain.errors import AgentLoopError
+from agency.domain.errors import AgentLoopError, invariant
 from agency.domain.ports.agent_backend import AgentBackend
 from agency.features.analyze.command import cmd_analyze
 from agency.features.fix.command import cmd_fix
@@ -33,6 +33,13 @@ def cmd_watch(
     flaky subprocess) doesn't kill the daemon. The error is logged and the
     loop continues on the next cycle.
     """
+    invariant(interval >= 1, "interval should never be < 1", interval=interval)
+    invariant(
+        max_open_issues >= 1,
+        "max_open_issues should never be < 1",
+        max_open_issues=max_open_issues,
+    )
+
     stopping = False
 
     def handle_signal(_sig: int, _frame: object) -> None:
