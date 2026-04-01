@@ -9,15 +9,12 @@ def invariant(condition: bool, rule: str, **values: object) -> None:  # noqa: FB
     """Raise InvariantError if condition is False.
 
     Use for programmer assumptions — conditions that should be impossible if the code is wired
-    correctly. Do not use to validate user/external input (parse that at the I/O boundary instead).
-
-    A violation means a programmer bug (bad wiring, missing validation, broken contract). For
-    example, asserting that a function received sane values from its callers, that a match is
-    exhaustive, or that a return value meets its contract.
+    correctly. A violation should always indicate a bug. Do not use to validate user/external
+    input (parse that at the I/O boundary instead).
 
     rule: state the violated constraint using "should never", e.g. "max should never be < 1"
 
-    values: variables involved in the condition, optionally included in the error message
+    values: variables from the condition; if present, will be included in the error message
         as key=value pairs to make debugging the bad runtime state easier - for example:
         invariant(max >= 1, "...", max=max) → InvariantError: max should never be < 1 (max=0)
     """
