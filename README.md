@@ -1,10 +1,9 @@
 # agency
 
 > [!CAUTION]
-> **Agency is a research project. If your name is not Michael Uloth, do not use it.**
+> **Agency was a research project. If your name is not Michael Uloth, do not use it.**
 >
-> This software may change or break without notice. No support or warranty is provided.
-> Use at your own risk.
+> No support or warranty is provided. Use at your own risk.
 
 ## Overview
 
